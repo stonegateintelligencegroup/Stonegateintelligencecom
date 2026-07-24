@@ -55,6 +55,46 @@ export default function About() {
         </div>
       </section>
 
+      {/* Our Team */}
+      <section className="py-24 bg-background border-t border-white/5">
+        <div className="container mx-auto px-4 md:px-8">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={fadeIn}
+            className="mb-16"
+          >
+            <h2 className="font-sans text-sm tracking-[0.3em] text-secondary uppercase mb-6">Our Team</h2>
+            <div className="w-12 h-px bg-primary mb-10" />
+          </motion.div>
+
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={staggerContainer}
+            className="max-w-4xl space-y-8 font-serif text-xl leading-loose text-foreground"
+          >
+            <motion.p variants={fadeIn}>
+              Our team brings a diverse background in investigative services, legal support, corporate security, surveillance analysis, and intelligence research.
+            </motion.p>
+            <motion.p variants={fadeIn}>
+              The foundation of our experience includes work involving investigative processes, accountability efforts, legal procedures, case support, evidence review, and information analysis. Our team has developed a strong understanding of how to locate information, evaluate details, identify patterns, document findings, and support informed decision-making.
+            </motion.p>
+            <motion.p variants={fadeIn}>
+              Our experience includes corporate surveillance and loss prevention operations involving the review and analysis of extensive video evidence, incident documentation, research, and risk identification across multi-location environments.
+            </motion.p>
+            <motion.p variants={fadeIn}>
+              By combining investigative knowledge, legal awareness, analytical research, and technology-driven intelligence methods, Stonegate Intelligence Group approaches each matter with discretion, professionalism, and a commitment to accurate, evidence-based findings.
+            </motion.p>
+            <motion.p variants={fadeIn}>
+              Our mission is to provide clients with reliable information, actionable insights, and a clear understanding of the facts surrounding complex situations.
+            </motion.p>
+          </motion.div>
+        </div>
+      </section>
+
       {/* Values */}
       <section className="py-24 bg-card border-t border-white/5">
         <div className="container mx-auto px-4 md:px-8">
