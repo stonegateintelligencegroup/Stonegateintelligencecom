@@ -43,7 +43,7 @@ export default function About() {
             className="max-w-4xl space-y-8 font-serif text-xl leading-loose text-foreground"
           >
             <motion.p variants={fadeIn}>
-              Stonegate Intelligence Group is a premier investigative and intelligence consulting firm dedicated to uncovering the truth when it matters most. Founded by Monica Morgado, the firm operates at the intersection of traditional investigative tradecraft and modern analytical methodologies.
+              Stonegate Intelligence Group is a premier investigative and intelligence consulting firm dedicated to uncovering the truth when it matters most. The firm operates at the intersection of traditional investigative tradecraft and modern analytical methodologies.
             </motion.p>
             <motion.p variants={fadeIn}>
               We serve a discerning clientele—including legal professionals, corporate executives, and private individuals—who require absolute discretion and unimpeachable accuracy. Our approach is surgical: we define the objective, map the information landscape, and execute a comprehensive collection strategy to yield actionable intelligence.

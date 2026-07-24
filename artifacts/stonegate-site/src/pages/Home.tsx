@@ -89,7 +89,7 @@ export default function Home() {
             <h2 className="font-sans text-sm tracking-[0.3em] text-secondary uppercase mb-6">Who We Are</h2>
             <div className="w-12 h-px bg-primary mx-auto mb-10" />
             <p className="font-serif text-2xl md:text-3xl leading-relaxed text-foreground">
-              Stonegate Intelligence Group is a professional investigative and intelligence services firm founded by Monica Morgado. We work with attorneys, individuals, and corporations to uncover facts, conduct due diligence, and deliver evidence-based intelligence.
+              Stonegate Intelligence Group is a professional investigative and intelligence services firm. We work with attorneys, individuals, and corporations to uncover facts, conduct due diligence, and deliver evidence-based intelligence.
             </p>
           </motion.div>
         </div>
