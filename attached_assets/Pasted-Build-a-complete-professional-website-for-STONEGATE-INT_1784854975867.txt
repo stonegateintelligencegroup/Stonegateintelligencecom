@@ -1,0 +1,449 @@
+Build a complete professional website for:
+
+STONEGATE INTELLIGENCE GROUP LLC
+
+Website:
+
+stonegateintelligence.com
+
+Business:
+
+Professional investigative services, intelligence consulting, due diligence, risk assessment, digital research, and litigation support.
+
+Create a production-ready full-stack React website with a professional backend contact form.
+
+TECH STACK:
+
+- React + TypeScript
+
+- Tailwind CSS
+
+- Node.js backend
+
+- Express API
+
+- Responsive mobile-first design
+
+- Modern component architecture
+
+- SEO optimized
+
+- Clean professional code structure
+
+BRAND DESIGN:
+
+Create a premium intelligence consulting aesthetic.
+
+Colors:
+
+- Background: Black / charcoal
+
+- Accent: Candy apple red
+
+- Text: White and light gray
+
+- Professional corporate appearance
+
+Style:
+
+- Sophisticated
+
+- Secure
+
+- Trustworthy
+
+- Discreet
+
+- Similar to a corporate intelligence consulting firm
+
+Use the company logo:
+
+Stonegate Intelligence Group logo featuring:
+
+- Black background
+
+- Candy apple red accents
+
+- Flower of Life pattern incorporated subtly in the background
+
+- Key symbol as the central icon
+
+Place the logo:
+
+- Header navigation
+
+- Hero section
+
+- Footer
+
+Create subtle animations:
+
+- Fade-ins
+
+- Smooth scrolling
+
+- Hover effects
+
+- Professional transitions
+
+--------------------------------------
+
+CREATE WEBSITE PAGES:
+
+1. HOME PAGE
+
+Hero:
+
+Display logo.
+
+Headline:
+
+Every question deserves an answer grounded in evidence.
+
+Subheadline:
+
+Stonegate Intelligence Group provides confidential investigative services, intelligence gathering, and analytical solutions designed to uncover facts, clarify uncertainty, and support informed decisions.
+
+Buttons:
+
+REQUEST A CONFIDENTIAL CONSULTATION
+
+LEARN OUR SERVICES
+
+Sections:
+
+WHO WE ARE
+
+Stonegate Intelligence Group provides professional investigative and intelligence services built on integrity, discretion, and evidence-based methodology.
+
+WHY CHOOSE STONEGATE
+
+Cards:
+
+Confidentiality
+
+Integrity
+
+Accuracy
+
+Professionalism
+
+Evidence-Based Intelligence
+
+Mission Statement:
+
+Our mission is to provide clients with reliable information, actionable insights, and documented findings through disciplined investigative practices and advanced research methodologies.
+
+--------------------------------------
+
+2. ABOUT US PAGE
+
+Title:
+
+About Stonegate Intelligence Group
+
+Content:
+
+Stonegate Intelligence Group is dedicated to providing professional intelligence and investigative services built on integrity, discretion, and attention to detail. We assist individuals, attorneys, and organizations in uncovering information, verifying facts, and gaining clarity in complex situations.
+
+Add:
+
+Stonegate Intelligence Group combines experienced investigative professionals, advanced digital research capabilities, and proven analytical methodologies to uncover critical facts in complex corporate, legal, and private matters.
+
+Add:
+
+Through disciplined investigative practices, technology-driven intelligence gathering, and thorough analysis, we provide clients with reliable information, actionable insights, and evidence-based findings to support informed decisions.
+
+Values:
+
+Confidentiality
+
+Protecting sensitive information through secure processes and professional discretion.
+
+Integrity
+
+Conducting every engagement with ethical standards, transparency, and respect for the truth.
+
+Accuracy
+
+Providing thoroughly researched findings supported by reliable information and documented evidence.
+
+Professionalism
+
+Delivering disciplined investigative services with clear communication and attention to client objectives.
+
+Evidence-Based Intelligence
+
+Transforming information into meaningful insights that help clients make informed decisions.
+
+--------------------------------------
+
+3. SERVICES PAGE
+
+Create service cards:
+
+Private Investigations
+
+Comprehensive investigative services designed to uncover facts, verify information, and provide documented findings.
+
+Background Research
+
+Detailed research and information gathering to help clients understand individuals, businesses, and situations.
+
+Due Diligence
+
+Investigative reviews designed to identify risks, verify claims, and support informed decisions.
+
+Evidence Collection & Documentation
+
+Organized collection, review, and documentation of relevant information.
+
+Digital Research
+
+Open-source intelligence research and analysis using publicly available information.
+
+Corporate Intelligence
+
+Research and investigative support for businesses requiring clarity and risk assessment.
+
+Legal Support Services
+
+Professional investigative assistance for attorneys and legal matters.
+
+--------------------------------------
+
+4. SERVICES & FEE SCHEDULE PAGE
+
+Title:
+
+Services & Fee Schedule
+
+Intro:
+
+Stonegate Intelligence Group provides investigative, due diligence, risk assessment, and intelligence consulting services to individuals, attorneys, and businesses.
+
+The rates below reflect standard pricing. Final quotes and engagement terms are confirmed in writing prior to engagement.
+
+HOURLY SERVICES TABLE:
+
+Standard Investigation / Surveillance
+
+$125 – $160/hr
+
+Due Diligence / Background Research
+
+$135 – $175/hr
+
+Litigation Support (Attorney Clients)
+
+$150 – $200/hr
+
+Risk Assessment / Intelligence Consulting
+
+$175 – $225/hr
+
+Digital & Financial Forensics
+
+$200 – $275/hr
+
+Additional:
+
+A 4-hour minimum applies to active field engagements including surveillance and onsite investigations.
+
+--------------------------------------
+
+FLAT FEE SERVICES:
+
+Basic Background Check
+
+$300 – $600
+
+Comprehensive Due Diligence Report
+
+$800 – $2,500
+
+Pre-Employment / Vendor Screening
+
+$250 – $500
+
+--------------------------------------
+
+RETAINER SERVICES:
+
+Initial Case Retainer
+
+$2,000 – $5,000
+
+Monthly Retainer
+
+$1,500 – $3,500/month
+
+Explanation:
+
+Retainers are billed against actual hours worked at applicable rates.
+
+--------------------------------------
+
+ADDITIONAL EXPENSES:
+
+Mileage:
+
+$0.76/mile IRS business mileage rate
+
+Database & Records Searches:
+
+Billed at cost
+
+GPS Tracking Equipment:
+
+$15-$50/day
+
+Court Filing & Document Retrieval:
+
+Billed at cost
+
+Travel:
+
+Lodging, airfare, and per diem billed at cost with approval
+
+--------------------------------------
+
+5. CONTACT PAGE
+
+Create a secure contact form.
+
+Fields:
+
+Full Name
+
+Phone Number
+
+Email Address
+
+Brief Case Summary
+
+Preferred Contact Method
+
+Best Time To Reach You
+
+Validation:
+
+Require:
+
+Name
+
+Phone
+
+Email
+
+Case Summary
+
+After submission display:
+
+Thank you for contacting Stonegate Intelligence Group. Your request has been received and will be reviewed confidentially.
+
+Backend:
+
+Create API endpoint:
+
+POST /api/contact
+
+Store submissions securely.
+
+Send notification email to:
+
+Monica.Morgado@stonegateintelligence.com
+
+Include spam protection.
+
+--------------------------------------
+
+6. CLIENT PORTAL PAGE
+
+Create placeholder:
+
+Stonegate Client Portal
+
+Text:
+
+Existing clients will have secure access to case updates, documents, reports, and communication through the Stonegate Intelligence Client Portal.
+
+Button:
+
+Client Login
+
+--------------------------------------
+
+NAVIGATION:
+
+Home
+
+About
+
+Services
+
+Fee Schedule
+
+Client Portal
+
+Contact
+
+--------------------------------------
+
+FOOTER:
+
+Stonegate Intelligence Group LLC
+
+Monica Morgado
+
+Founder & Managing Director
+
+Phone:
+
+509-599-5488
+
+Email:
+
+Monica.Morgado@stonegateintelligence.com
+
+Website:
+
+stonegateintelligence.com
+
+Tagline:
+
+Every question deserves an answer grounded in evidence.
+
+--------------------------------------
+
+SEO:
+
+Page title:
+
+Stonegate Intelligence Group | Investigative & Intelligence Services
+
+Meta description:
+
+Stonegate Intelligence Group provides confidential investigative services, intelligence consulting, due diligence, digital research, and evidence-based solutions.
+
+--------------------------------------
+
+FINAL REQUIREMENTS:
+
+Make the website ready for deployment.
+
+Prepare configuration for:
+
+- Custom domain connection
+
+- SSL
+
+- Future client portal expansion
+
+- Database integration
+
+- Secure document management
+
+Do not create a generic template.
+
+Create a premium, credible intelligence consulting website specifically branded for Stonegate Intelligence Group LLC.
