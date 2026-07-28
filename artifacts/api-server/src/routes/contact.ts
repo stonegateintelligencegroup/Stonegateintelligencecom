@@ -192,46 +192,58 @@ router.post("/contact", async (req, res): Promise<void> => {
     "New contact inquiry saved to database"
   );
 
-  // Send email notification if API key is configured
+  // Send email notification
   const resendApiKey = process.env.RESEND_API_KEY;
-  if (resendApiKey) {
-    try {
-      const resend = new Resend(resendApiKey);
-      const submittedAt = new Date().toLocaleString("en-US", {
-        timeZone: "America/Los_Angeles",
-        dateStyle: "long",
-        timeStyle: "short",
+  if (!resendApiKey) {
+    req.log.error("RESEND_API_KEY is not configured");
+    res.status(500).json({
+      error: "Email service is not configured. Please contact us directly at Monica.Morgado@stonegateintelligence.com.",
+    });
+    return;
+  }
+
+  try {
+    const resend = new Resend(resendApiKey);
+    const submittedAt = new Date().toLocaleString("en-US", {
+      timeZone: "America/Los_Angeles",
+      dateStyle: "long",
+      timeStyle: "short",
+    });
+
+    const emailFields = {
+      fullName,
+      email,
+      phone,
+      caseSummary,
+      preferredContact,
+      bestTime,
+      submittedAt,
+    };
+
+    const { error: sendError } = await resend.emails.send({
+      from: "Stonegate Intelligence Group <noreply@stonegateintelligence.com>",
+      to: ["Monica.Morgado@stonegateintelligence.com"],
+      replyTo: email,
+      subject: `New Inquiry from ${fullName} — Stonegate Intelligence Group`,
+      html: buildEmailHtml(emailFields),
+      text: buildEmailText(emailFields),
+    });
+
+    if (sendError) {
+      req.log.error({ sendError }, "Resend API returned an error");
+      res.status(500).json({
+        error: "We were unable to deliver your message. Please try again or contact us directly at Monica.Morgado@stonegateintelligence.com.",
       });
-
-      const emailFields = {
-        fullName,
-        email,
-        phone,
-        caseSummary,
-        preferredContact,
-        bestTime,
-        submittedAt,
-      };
-
-      const { error: sendError } = await resend.emails.send({
-        from: "Stonegate Intelligence Group <noreply@stonegateintelligence.com>",
-        to: ["Monica.Morgado@stonegateintelligence.com"],
-        replyTo: email,
-        subject: `New Inquiry from ${fullName} — Stonegate Intelligence Group`,
-        html: buildEmailHtml(emailFields),
-        text: buildEmailText(emailFields),
-      });
-
-      if (sendError) {
-        req.log.error({ sendError }, "Resend API returned an error");
-      } else {
-        req.log.info({ inquiryId: inquiry.id }, "Email notification sent");
-      }
-    } catch (err) {
-      req.log.error({ err }, "Failed to send email notification");
+      return;
     }
-  } else {
-    req.log.warn("RESEND_API_KEY not set — email notification skipped");
+
+    req.log.info({ inquiryId: inquiry.id }, "Email notification sent successfully");
+  } catch (err) {
+    req.log.error({ err }, "Failed to send email notification");
+    res.status(500).json({
+      error: "We were unable to deliver your message. Please try again or contact us directly at Monica.Morgado@stonegateintelligence.com.",
+    });
+    return;
   }
 
   res.status(201).json({
