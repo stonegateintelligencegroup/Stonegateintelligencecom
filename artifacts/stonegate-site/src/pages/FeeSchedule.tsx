@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { motion } from 'framer-motion';
 
 const fadeIn = {
@@ -10,7 +11,7 @@ const staggerContainer = {
   visible: { opacity: 1, transition: { staggerChildren: 0.12 } },
 };
 
-function SectionNote({ children }: { children: React.ReactNode }) {
+function SectionNote({ children }: { children: ReactNode }) {
   return (
     <p className="mt-5 text-sm text-muted-foreground leading-relaxed italic border-l-2 border-white/10 pl-4">
       {children}
