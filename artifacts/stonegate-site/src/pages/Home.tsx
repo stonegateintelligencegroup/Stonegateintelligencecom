@@ -22,16 +22,16 @@ export default function Home() {
   return (
     <div className="w-full flex flex-col">
       {/* Hero Section */}
-      <section className="relative min-h-[100dvh] flex items-center justify-center overflow-hidden bg-black">
+      <section className="relative bg-black overflow-hidden" style={{ height: '100dvh' }}>
         <motion.img
           src={logo}
           alt="Stonegate Intelligence Group"
           initial={{ opacity: 0, scale: 1.05 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 1.4, ease: "easeOut" as const }}
-          className="absolute inset-0 w-full h-full object-cover object-center"
+          className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 max-h-[85vh] max-w-[85vw] w-auto h-auto object-contain"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background opacity-60" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background opacity-50" />
       </section>
 
       {/* Who We Are */}
