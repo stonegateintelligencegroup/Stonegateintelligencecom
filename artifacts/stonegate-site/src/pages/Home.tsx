@@ -23,29 +23,29 @@ export default function Home() {
     <div className="w-full flex flex-col">
       {/* Hero Section */}
       <section className="relative min-h-[100dvh] flex items-center justify-center overflow-hidden bg-background">
-        <div className="absolute inset-0 bg-sacred-geometry opacity-5" />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/80 to-background z-0" />
-        
-        <div className="container mx-auto px-4 relative z-10 flex flex-col items-center text-center mt-[-10vh]">
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 1, ease: "easeOut" as const }}
-            className="w-32 h-32 md:w-48 md:h-48 mb-10 rounded-full overflow-hidden border-2 border-white/10 shadow-2xl shadow-primary/20"
-          >
-            <img src={logo} alt="Stonegate Intelligence Group" className="w-full h-full object-cover" />
-          </motion.div>
-          
-          <motion.h1 
+        {/* Logo as full background */}
+        <motion.img
+          src={logo}
+          alt=""
+          aria-hidden="true"
+          initial={{ opacity: 0, scale: 1.05 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 1.4, ease: "easeOut" as const }}
+          className="absolute inset-0 w-full h-full object-cover object-center"
+        />
+        {/* Dark overlay so headline stays readable */}
+        <div className="absolute inset-0 bg-black/65" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-background" />
+
+        <div className="container mx-auto px-4 relative z-10 flex flex-col items-center text-center">
+          <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.3 }}
-            className="font-serif text-4xl md:text-6xl lg:text-7xl font-bold tracking-wide text-foreground max-w-4xl leading-tight mb-8"
+            transition={{ duration: 0.8, delay: 0.4 }}
+            className="font-serif text-4xl md:text-6xl lg:text-7xl font-bold tracking-wide text-foreground max-w-4xl leading-tight"
           >
             Every question deserves an answer grounded in evidence.
           </motion.h1>
-          
-          
         </div>
       </section>
 
