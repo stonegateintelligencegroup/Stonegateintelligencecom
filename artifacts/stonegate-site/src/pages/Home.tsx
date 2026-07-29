@@ -45,14 +45,6 @@ export default function Home() {
             Every question deserves an answer grounded in evidence.
           </motion.h1>
           
-          <motion.p 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.6 }}
-            className="font-sans text-lg md:text-xl text-muted-foreground max-w-3xl leading-relaxed mb-12"
-          >
-            To provide unparalleled investigative and intelligence services that empower our clients to make informed decisions. We bridge the gap between uncertainty and clarity through relentless research, analytical rigor, and an uncompromising commitment to the truth.
-          </motion.p>
           
         </div>
       </section>
