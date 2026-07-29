@@ -9,7 +9,6 @@ import ScrollToTop from '@/components/ScrollToTop';
 import Home from '@/pages/Home';
 import About from '@/pages/About';
 import Services from '@/pages/Services';
-import FeeSchedule from '@/pages/FeeSchedule';
 import Contact from '@/pages/Contact';
 import Portal from '@/pages/Portal';
 
@@ -23,7 +22,6 @@ function Router() {
         <Route path="/" component={Home} />
         <Route path="/about" component={About} />
         <Route path="/services" component={Services} />
-        <Route path="/fee-schedule" component={FeeSchedule} />
         <Route path="/contact" component={Contact} />
         <Route path="/portal" component={Portal} />
         <Route component={NotFound} />
