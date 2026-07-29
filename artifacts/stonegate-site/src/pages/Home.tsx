@@ -22,25 +22,16 @@ export default function Home() {
   return (
     <div className="w-full flex flex-col">
       {/* Hero Section */}
-      <section className="relative min-h-[100dvh] flex items-center justify-center overflow-hidden bg-background">
-        <div className="absolute inset-0 bg-sacred-geometry opacity-5" />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/60 to-background" />
-
-        <div className="container mx-auto px-4 relative z-10 flex flex-col items-center text-center">
-          {/* Logo + tagline lockup */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 1.2, ease: "easeOut" as const }}
-            className="flex flex-col items-center"
-          >
-            <img
-              src={logo}
-              alt="Stonegate Intelligence Group"
-              className="w-[90vmin] max-w-3xl object-contain drop-shadow-2xl"
-            />
-          </motion.div>
-        </div>
+      <section className="relative min-h-[100dvh] flex items-center justify-center overflow-hidden bg-black">
+        <motion.img
+          src={logo}
+          alt="Stonegate Intelligence Group"
+          initial={{ opacity: 0, scale: 1.05 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 1.4, ease: "easeOut" as const }}
+          className="absolute inset-0 w-full h-full object-cover object-center"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background opacity-60" />
       </section>
 
       {/* Who We Are */}
