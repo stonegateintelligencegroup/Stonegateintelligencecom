@@ -6,6 +6,7 @@ import { Route, Switch, Router as WouterRouter } from 'wouter';
 
 import Shell from '@/components/layout/Shell';
 import ScrollToTop from '@/components/ScrollToTop';
+import { useGAPageTracking } from '@/hooks/useGAPageTracking';
 import Home from '@/pages/Home';
 import About from '@/pages/About';
 import Services from '@/pages/Services';
@@ -15,6 +16,7 @@ import Portal from '@/pages/Portal';
 const queryClient = new QueryClient();
 
 function Router() {
+  useGAPageTracking();
   return (
     <Shell>
       <ScrollToTop />
