@@ -51,7 +51,7 @@ export default function Home() {
             transition={{ duration: 0.8, delay: 0.6 }}
             className="font-sans text-lg md:text-xl text-muted-foreground max-w-3xl leading-relaxed mb-12"
           >
-            Stonegate Intelligence Group is a professional investigative and intelligence services firm. We work with attorneys, individuals, and corporations to uncover facts, conduct due diligence, and deliver evidence-based intelligence.
+            To provide unparalleled investigative and intelligence services that empower our clients to make informed decisions. We bridge the gap between uncertainty and clarity through relentless research, analytical rigor, and an uncompromising commitment to the truth.
           </motion.p>
           
         </div>
