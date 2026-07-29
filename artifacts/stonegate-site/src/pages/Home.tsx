@@ -33,7 +33,7 @@ export default function Home() {
         />
         <div className="flex flex-col items-center gap-3 mt-4">
           <div className="w-16 h-px bg-primary" />
-          <p className="font-sans text-white text-sm md:text-base tracking-[0.4em] uppercase whitespace-nowrap">
+          <p className="font-sans text-white text-xl tracking-[0.4em] uppercase whitespace-nowrap">
             Intelligence &nbsp;·&nbsp; Insight &nbsp;·&nbsp; Impact
           </p>
           <div className="w-16 h-px bg-primary" />
