@@ -43,13 +43,13 @@ export default function About() {
             className="max-w-4xl space-y-8 font-serif text-xl leading-loose text-foreground"
           >
             <motion.p variants={fadeIn}>
-              Stonegate Intelligence Group is a premier investigative and intelligence consulting firm dedicated to uncovering the truth when it matters most. The firm operates at the intersection of traditional investigative tradecraft and modern analytical methodologies.
+              Stonegate Intelligence Group is an intelligence, research, and consulting firm providing confidential intelligence, due diligence, and analytical services. We combine established investigative practices with modern research methodologies to deliver objective, reliable information that supports informed decision making.
             </motion.p>
             <motion.p variants={fadeIn}>
-              We serve a discerning clientele—including legal professionals, corporate executives, and private individuals—who require absolute discretion and unimpeachable accuracy. Our approach is surgical: we define the objective, map the information landscape, and execute a comprehensive collection strategy to yield actionable intelligence.
+              Our approach begins with a clear understanding of each client's objectives. We apply disciplined research, structured information collection, and objective analysis to develop accurate, defensible findings tailored to the unique requirements of every engagement.
             </motion.p>
             <motion.p variants={fadeIn}>
-              In an era defined by information overload and obscured facts, Stonegate Intelligence Group stands as a bulwark of clarity. We do not deal in assumptions; we deliver evidence-based solutions that stand up to the most rigorous scrutiny, whether in a boardroom or a courtroom.
+              In an environment where information is abundant but reliable intelligence is often difficult to obtain, Stonegate Intelligence Group delivers clarity through disciplined research and objective analysis. We are committed to providing evidence based findings that withstand careful review and support confident, well informed decisions.
             </motion.p>
           </motion.div>
         </div>
