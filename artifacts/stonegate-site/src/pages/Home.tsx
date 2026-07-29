@@ -102,7 +102,7 @@ export default function Home() {
           >
             <h2 className="font-serif text-3xl md:text-5xl font-bold mb-8">Our Mission</h2>
             <p className="font-sans text-lg md:text-xl text-muted-foreground leading-relaxed">
-              To provide unparalleled investigative and intelligence services that empower our clients to make informed decisions. We bridge the gap between uncertainty and clarity through relentless research, analytical rigor, and an uncompromising commitment to the truth.
+              Our mission is to deliver reliable intelligence, research, and analytical services that empower clients to make informed decisions. We are committed to developing objective facts, providing clear insight, and maintaining the highest standards of discretion, integrity, and professional excellence.
             </p>
             <div className="mt-12">
               <Link href="/about" className="inline-flex items-center gap-2 text-primary hover:text-white transition-colors uppercase tracking-widest text-sm font-semibold">
