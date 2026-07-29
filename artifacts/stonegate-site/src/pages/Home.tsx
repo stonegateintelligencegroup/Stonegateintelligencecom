@@ -22,18 +22,18 @@ export default function Home() {
   return (
     <div className="w-full flex flex-col">
       {/* Hero Section */}
-      <section className="relative bg-black min-h-screen flex flex-col items-center justify-center gap-8 py-16">
+      <section className="relative bg-black min-h-screen flex flex-col items-center justify-start pt-20">
         <motion.img
           src={logo}
           alt="Stonegate Intelligence Group"
           initial={{ opacity: 0, scale: 1.05 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 1.4, ease: "easeOut" as const }}
-          className="w-[55vmin] max-w-md object-contain"
+          className="w-full max-h-[68vh] object-contain object-top"
         />
-        <div className="flex flex-col items-center gap-3">
+        <div className="flex flex-col items-center gap-3 mt-4">
           <div className="w-16 h-px bg-primary" />
-          <p className="font-sans text-white text-sm md:text-base tracking-[0.5em] uppercase">
+          <p className="font-sans text-white text-sm md:text-base tracking-[0.4em] uppercase whitespace-nowrap">
             Intelligence &nbsp;·&nbsp; Insight &nbsp;·&nbsp; Impact
           </p>
           <div className="w-16 h-px bg-primary" />
