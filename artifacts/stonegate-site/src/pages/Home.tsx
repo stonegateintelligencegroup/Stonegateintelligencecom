@@ -51,7 +51,7 @@ export default function Home() {
             transition={{ duration: 0.8, delay: 0.6 }}
             className="font-sans text-lg md:text-xl text-muted-foreground max-w-3xl leading-relaxed mb-12"
           >
-            Stonegate Intelligence Group provides confidential investigative services, intelligence gathering, and analytical solutions designed to uncover facts, clarify uncertainty, and support informed decisions.
+            Stonegate Intelligence Group provides confidential research, intelligence, and analytical services focused on fact development, risk assessment, and decision support for businesses, legal professionals, and private clients.
           </motion.p>
           
           <motion.div 
