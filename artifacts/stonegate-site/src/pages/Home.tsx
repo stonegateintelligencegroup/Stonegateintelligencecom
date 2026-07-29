@@ -54,25 +54,6 @@ export default function Home() {
             Stonegate Intelligence Group is a professional investigative and intelligence services firm. We work with attorneys, individuals, and corporations to uncover facts, conduct due diligence, and deliver evidence-based intelligence.
           </motion.p>
           
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.9 }}
-            className="flex flex-col sm:flex-row gap-6 w-full sm:w-auto"
-          >
-            <Link 
-              href="/contact" 
-              className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 uppercase tracking-widest text-sm font-semibold transition-all shadow-[0_0_20px_rgba(220,20,60,0.3)] hover:shadow-[0_0_30px_rgba(220,20,60,0.5)] border border-primary text-center"
-            >
-              Request a Confidential Consultation
-            </Link>
-            <Link 
-              href="/services" 
-              className="bg-transparent hover:bg-white/5 text-foreground border border-white/20 px-8 py-4 uppercase tracking-widest text-sm font-semibold transition-all text-center"
-            >
-              Learn Our Services
-            </Link>
-          </motion.div>
         </div>
       </section>
 
@@ -149,6 +130,40 @@ export default function Home() {
             <div className="mt-12">
               <Link href="/about" className="inline-flex items-center gap-2 text-primary hover:text-white transition-colors uppercase tracking-widest text-sm font-semibold">
                 Read More About Us <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Request Our Services CTA */}
+      <section className="py-24 bg-card relative z-10 border-t border-white/5">
+        <div className="container mx-auto px-4 md:px-8">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={fadeIn}
+            className="max-w-2xl mx-auto text-center"
+          >
+            <h2 className="font-sans text-sm tracking-[0.3em] text-secondary uppercase mb-6">Get Started</h2>
+            <div className="w-12 h-px bg-primary mx-auto mb-10" />
+            <h3 className="font-serif text-3xl md:text-4xl font-bold mb-6">Request Our Services</h3>
+            <p className="font-sans text-muted-foreground leading-relaxed mb-12">
+              Ready to move forward? Contact us today to discuss your matter confidentially. All inquiries are handled with complete discretion.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-6 justify-center">
+              <Link
+                href="/contact"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 uppercase tracking-widest text-sm font-semibold transition-all shadow-[0_0_20px_rgba(220,20,60,0.3)] hover:shadow-[0_0_30px_rgba(220,20,60,0.5)] border border-primary text-center"
+              >
+                Request a Confidential Consultation
+              </Link>
+              <Link
+                href="/services"
+                className="bg-transparent hover:bg-white/5 text-foreground border border-white/20 px-8 py-4 uppercase tracking-widest text-sm font-semibold transition-all text-center"
+              >
+                Learn Our Services
               </Link>
             </div>
           </motion.div>
