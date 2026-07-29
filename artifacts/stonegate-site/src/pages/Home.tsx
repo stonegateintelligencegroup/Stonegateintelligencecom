@@ -37,7 +37,7 @@ export default function Home() {
             <img
               src={logo}
               alt="Stonegate Intelligence Group"
-              className="w-64 h-64 md:w-80 md:h-80 lg:w-96 lg:h-96 object-contain drop-shadow-2xl"
+              className="w-[90vmin] max-w-3xl object-contain drop-shadow-2xl"
             />
           </motion.div>
         </div>
