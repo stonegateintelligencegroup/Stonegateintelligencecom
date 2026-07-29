@@ -32,11 +32,11 @@ export default function Home() {
           className="w-full max-h-[68vh] object-contain object-top"
         />
         <div className="flex flex-col items-center gap-3 mt-4">
-          <div className="w-16 h-px bg-primary" />
+          <div className="w-full h-px bg-primary" />
           <p className="font-sans text-white text-sm tracking-[0.15em] uppercase whitespace-nowrap">
             Intelligence &nbsp;·&nbsp; Insight &nbsp;·&nbsp; Impact
           </p>
-          <div className="w-16 h-px bg-primary" />
+          <div className="w-full h-px bg-primary" />
         </div>
       </section>
 
