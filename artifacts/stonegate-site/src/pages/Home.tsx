@@ -23,29 +23,23 @@ export default function Home() {
     <div className="w-full flex flex-col">
       {/* Hero Section */}
       <section className="relative min-h-[100dvh] flex items-center justify-center overflow-hidden bg-background">
-        {/* Logo as full background */}
-        <motion.img
-          src={logo}
-          alt=""
-          aria-hidden="true"
-          initial={{ opacity: 0, scale: 1.05 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 1.4, ease: "easeOut" as const }}
-          className="absolute inset-0 w-full h-full object-cover object-center"
-        />
-        {/* Dark overlay so headline stays readable */}
-        <div className="absolute inset-0 bg-black/65" />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-background" />
+        <div className="absolute inset-0 bg-sacred-geometry opacity-5" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/60 to-background" />
 
         <div className="container mx-auto px-4 relative z-10 flex flex-col items-center text-center">
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-            className="font-serif text-4xl md:text-6xl lg:text-7xl font-bold tracking-wide text-foreground max-w-4xl leading-tight"
+          {/* Logo + tagline lockup */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 1.2, ease: "easeOut" as const }}
+            className="flex flex-col items-center"
           >
-            Every question deserves an answer grounded in evidence.
-          </motion.h1>
+            <img
+              src={logo}
+              alt="Stonegate Intelligence Group"
+              className="w-64 h-64 md:w-80 md:h-80 lg:w-96 lg:h-96 object-contain drop-shadow-2xl"
+            />
+          </motion.div>
         </div>
       </section>
 
