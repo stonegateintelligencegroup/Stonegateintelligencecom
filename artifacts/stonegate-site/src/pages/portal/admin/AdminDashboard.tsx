@@ -8,7 +8,7 @@ const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 interface Client { id: number; name: string; email: string; isActive: boolean; createdAt: string; }
 interface Case {
   id: number; caseNumber: string; status: string;
-  clientName: string | null; clientEmail: string | null;
+  clientId: number; clientName: string | null; clientEmail: string | null;
   assignedInvestigator: string | null; lastUpdate: string;
 }
 
@@ -129,17 +129,28 @@ export default function AdminDashboard() {
                 <div className="border border-white/10 rounded-lg p-8 text-center text-muted-foreground text-sm">No clients yet</div>
               ) : (
                 <div className="space-y-2">
-                  {clients.map(c => (
-                    <div key={c.id} className="flex items-center justify-between border border-white/10 rounded-lg px-5 py-4 bg-white/2">
-                      <div>
-                        <p className="text-sm text-foreground">{c.name}</p>
-                        <p className="text-xs text-muted-foreground">{c.email}</p>
+                  {clients.map(c => {
+                    const clientCase = cases.find(ca => ca.clientId === c.id);
+                    return (
+                      <div
+                        key={c.id}
+                        onClick={() => clientCase ? setLocation(`/portal/admin/cases/${clientCase.id}`) : setLocation(`/portal/admin/cases/new`)}
+                        className="flex items-center justify-between border border-white/10 rounded-lg px-5 py-4 bg-white/2 cursor-pointer hover:border-primary/40 hover:bg-white/4 transition-colors"
+                      >
+                        <div>
+                          <p className="text-sm text-foreground">{c.name}</p>
+                          <p className="text-xs text-muted-foreground">{c.email}</p>
+                          {clientCase && <p className="text-xs text-primary/70 mt-0.5">{clientCase.caseNumber}</p>}
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className={`text-xs px-2.5 py-1 rounded border ${c.isActive ? "text-green-400 border-green-400/30 bg-green-400/10" : "text-yellow-400 border-yellow-400/30 bg-yellow-400/10"}`}>
+                            {c.isActive ? "Active" : "Invite Pending"}
+                          </span>
+                          <span className="text-muted-foreground/40 text-xs">→</span>
+                        </div>
                       </div>
-                      <span className={`text-xs px-2.5 py-1 rounded border ${c.isActive ? "text-green-400 border-green-400/30 bg-green-400/10" : "text-yellow-400 border-yellow-400/30 bg-yellow-400/10"}`}>
-                        {c.isActive ? "Active" : "Invite Pending"}
-                      </span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
