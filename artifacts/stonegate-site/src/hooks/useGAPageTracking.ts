@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation } from 'wouter';
+import { useCookieConsent } from '@/context/CookieConsentContext';
 
 declare global {
   interface Window {
@@ -9,13 +10,16 @@ declare global {
 
 /**
  * Fires a GA4 page_view event on every wouter route change,
- * including the initial load. Tracking failures are swallowed
+ * including the initial load. Only fires when the user has
+ * accepted analytics cookies. Tracking failures are swallowed
  * so ad-blockers or missing gtag never break the site.
  */
 export function useGAPageTracking() {
   const [location] = useLocation();
+  const { status } = useCookieConsent();
 
   useEffect(() => {
+    if (status !== 'accepted') return;
     try {
       if (typeof window.gtag === 'function') {
         window.gtag('event', 'page_view', {
@@ -25,5 +29,5 @@ export function useGAPageTracking() {
     } catch {
       // analytics failures must never break the site
     }
-  }, [location]);
+  }, [location, status]);
 }

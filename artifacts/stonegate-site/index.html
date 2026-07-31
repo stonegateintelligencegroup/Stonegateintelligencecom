@@ -20,6 +20,11 @@
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
+      // Default consent: deny analytics until the user explicitly accepts
+      gtag('consent', 'default', {
+        analytics_storage: 'denied',
+        wait_for_update: 500,
+      });
       gtag('js', new Date());
       gtag('config', 'G-CMZGEPWT6L', { send_page_view: false });
     </script>
