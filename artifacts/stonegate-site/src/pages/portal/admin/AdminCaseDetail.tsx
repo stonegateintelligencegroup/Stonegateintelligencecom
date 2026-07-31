@@ -35,6 +35,7 @@ export default function AdminCaseDetail() {
   const [investigator, setInvestigator] = useState("");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   // Upload state
   const [uploading, setUploading] = useState(false);
@@ -70,14 +71,23 @@ export default function AdminCaseDetail() {
 
   const saveCase = async () => {
     setSaving(true);
+    setError("");
+    setSaved(false);
     try {
-      await fetch(`${BASE}/api/portal/admin/cases/${caseId}`, {
+      const res = await fetch(`${BASE}/api/portal/admin/cases/${caseId}`, {
         method: "PATCH", credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status, assignedInvestigator: investigator || null, notes: notes || null }),
       });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setError(body.error ?? `Save failed (${res.status}).`);
+        return;
+      }
       await loadAll();
-    } catch { setError("Failed to save."); }
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch { setError("Network error — could not save."); }
     finally { setSaving(false); }
   };
 
@@ -183,13 +193,16 @@ export default function AdminCaseDetail() {
               />
             </div>
           </div>
-          <button
-            onClick={saveCase}
-            disabled={saving}
-            className="mt-5 bg-primary hover:bg-primary/90 text-white text-xs tracking-[0.15em] uppercase px-6 py-2.5 rounded transition-colors disabled:opacity-50"
-          >
-            {saving ? "Saving…" : "Save Changes"}
-          </button>
+          <div className="mt-5 flex items-center gap-4">
+            <button
+              onClick={saveCase}
+              disabled={saving}
+              className="bg-primary hover:bg-primary/90 text-white text-xs tracking-[0.15em] uppercase px-6 py-2.5 rounded transition-colors disabled:opacity-50"
+            >
+              {saving ? "Saving…" : "Save Changes"}
+            </button>
+            {saved && <span className="text-xs text-green-400 tracking-wide">Saved ✓</span>}
+          </div>
         </div>
 
         {/* Documents */}
