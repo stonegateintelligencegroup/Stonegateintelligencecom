@@ -1,0 +1,1 @@
+- [Client Portal Architecture](portal-architecture.md) — session auth, DB tables, storage quirks, codegen gotcha with api-zod types
