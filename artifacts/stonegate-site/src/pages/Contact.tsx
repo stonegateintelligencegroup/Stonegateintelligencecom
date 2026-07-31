@@ -5,6 +5,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Mail, Phone, Globe, User, Shield } from 'lucide-react';
 import { useSubmitContact } from '@workspace/api-client-react';
+import { useCookieConsent } from '@/context/CookieConsentContext';
+import { trackEvent } from '@/lib/analytics';
 
 import {
   Form,
@@ -36,6 +38,7 @@ const formSchema = z.object({
 export default function Contact() {
   const [isSuccess, setIsSuccess] = useState(false);
   const submitContact = useSubmitContact();
+  const { status: consentStatus } = useCookieConsent();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -63,6 +66,9 @@ export default function Contact() {
       onSuccess: () => {
         setIsSuccess(true);
         form.reset();
+        if (consentStatus === 'accepted') {
+          trackEvent('contact_form_submitted');
+        }
       }
     });
   }

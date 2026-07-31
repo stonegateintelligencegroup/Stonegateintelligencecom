@@ -1,8 +1,11 @@
 import { motion } from 'framer-motion';
 import { Shield, Search, FileSearch, HardDrive, Briefcase, Scale, Target } from 'lucide-react';
 import { Link } from 'wouter';
+import { useCookieConsent } from '@/context/CookieConsentContext';
+import { trackEvent } from '@/lib/analytics';
 
 export default function Services() {
+  const { status: consentStatus } = useCookieConsent();
   const fadeIn = {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" as const } }
@@ -87,6 +90,11 @@ export default function Services() {
                 key={i} 
                 variants={fadeIn}
                 className="bg-card p-8 md:p-10 border border-white/5 hover:border-primary/50 transition-all duration-300 group flex flex-col"
+                onClick={() => {
+                  if (consentStatus === 'accepted') {
+                    trackEvent('service_card_click', { service_name: service.title });
+                  }
+                }}
               >
                 <div className="mb-6 inline-flex items-center justify-center w-14 h-14 bg-background border border-white/10 rounded-full group-hover:border-primary/50 transition-colors">
                   <service.icon className="w-6 h-6 text-secondary group-hover:text-primary transition-colors" />
