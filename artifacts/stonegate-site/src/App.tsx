@@ -12,6 +12,7 @@ import Home from '@/pages/Home';
 import About from '@/pages/About';
 import Services from '@/pages/Services';
 import Contact from '@/pages/Contact';
+import Privacy from '@/pages/Privacy';
 import Portal from '@/pages/Portal';
 
 // Portal pages
@@ -63,6 +64,7 @@ function Router() {
         <Route path="/about" component={About} />
         <Route path="/services" component={Services} />
         <Route path="/contact" component={Contact} />
+        <Route path="/privacy" component={Privacy} />
 
         {/* Portal auth */}
         <Route path="/portal/login" component={Login} />
