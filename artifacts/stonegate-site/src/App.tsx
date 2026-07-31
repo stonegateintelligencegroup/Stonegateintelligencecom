@@ -18,6 +18,8 @@ import Portal from '@/pages/Portal';
 // Portal pages
 import Login from '@/pages/portal/Login';
 import SetPassword from '@/pages/portal/SetPassword';
+import ForgotPassword from '@/pages/portal/ForgotPassword';
+import ResetPassword from '@/pages/portal/ResetPassword';
 import ClientDashboard from '@/pages/portal/ClientDashboard';
 import ClientDocuments from '@/pages/portal/ClientDocuments';
 import ClientMessages from '@/pages/portal/ClientMessages';
@@ -69,6 +71,8 @@ function Router() {
         {/* Portal auth */}
         <Route path="/portal/login" component={Login} />
         <Route path="/portal/invite/:token" component={SetPassword} />
+        <Route path="/portal/forgot-password" component={ForgotPassword} />
+        <Route path="/portal/reset-password/:token" component={ResetPassword} />
 
         {/* Portal root redirect */}
         <Route path="/portal" component={Portal} />

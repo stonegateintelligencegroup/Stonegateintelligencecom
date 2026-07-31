@@ -11,7 +11,7 @@ description: Session-based auth, DB tables, file storage, and key quirks for the
 - Role guard middleware in `artifacts/api-server/src/middlewares/auth.ts`: `requireAuth` and `requireAdmin`
 - Admin seeded on startup via `seedAdminAccount()` in `artifacts/api-server/src/lib/seedAdmin.ts` — reads `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME` env vars, idempotent
 - Invite-only: admin creates client via POST /api/portal/admin/clients → Resend sends invite email → client sets password at /portal/invite/:token → 72h expiry
-- **No self-service password reset yet** (proposed as follow-up task #8)
+- Self-service password reset via `inviteToken`/`inviteTokenExpiry` fields (1-hour expiry); routes: POST /api/auth/forgot-password and POST /api/auth/reset-password; frontend pages at /portal/forgot-password and /portal/reset-password/:token
 
 ## Database tables (all in `lib/db/src/schema/portal.ts`)
 - `portal_users` — accounts, roles, password hashes, invite tokens
