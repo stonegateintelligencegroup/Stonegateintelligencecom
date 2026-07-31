@@ -3,7 +3,7 @@ import bcrypt from "bcrypt";
 import { randomBytes } from "crypto";
 import { db } from "@workspace/db";
 import { portalUsersTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 import { Resend } from "resend";
 
@@ -21,7 +21,7 @@ router.post("/auth/login", async (req: Request, res: Response) => {
   const [user] = await db
     .select()
     .from(portalUsersTable)
-    .where(eq(portalUsersTable.email, email.toLowerCase().trim()))
+    .where(sql`lower(${portalUsersTable.email}) = ${email.toLowerCase().trim()}`)
     .limit(1);
 
   if (!user || !user.passwordHash || !user.isActive) {
@@ -93,7 +93,7 @@ router.post("/auth/forgot-password", async (req: Request, res: Response) => {
   const [user] = await db
     .select()
     .from(portalUsersTable)
-    .where(eq(portalUsersTable.email, email.toLowerCase().trim()))
+    .where(sql`lower(${portalUsersTable.email}) = ${email.toLowerCase().trim()}`)
     .limit(1);
 
   // Always respond with success to prevent email enumeration
