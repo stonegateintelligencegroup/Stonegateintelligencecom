@@ -1,15 +1,14 @@
-import { useEffect, useState, useCallback } from "react";
-import { Plus, Folder, FolderOpen, FileText, Trash2, ChevronRight, AlertCircle } from "lucide-react";
+import { useEffect, useState, useRef, useCallback } from "react";
+import { Plus, Folder, FolderOpen, FileText, Trash2, ChevronRight, AlertCircle, Pencil } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-interface NoteFolder { id: number; name: string; createdAt: string; }
+interface NoteFolder { id: number; name: string; }
 interface CaseNote {
   id: number; title: string; content: string;
   folderId: number | null; authorName: string | null;
   createdAt: string; updatedAt: string;
 }
-
 type FolderView = "all" | "unfiled" | number;
 
 function timeAgo(iso: string) {
@@ -22,65 +21,78 @@ function timeAgo(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-export default function CaseNotes({ caseId, adminId }: { caseId: number; adminId: number }) {
+export default function CaseNotes({ caseId }: { caseId: number; adminId: number }) {
   const [folders, setFolders] = useState<NoteFolder[]>([]);
   const [notes, setNotes] = useState<CaseNote[]>([]);
   const [selectedFolder, setSelectedFolder] = useState<FolderView>("all");
-  const [selectedNoteId, setSelectedNoteId] = useState<number | null>(null);
   const [error, setError] = useState("");
 
-  // Editor state — tracks what's currently in the editor
+  // Which note is open in the editor
+  const [openNoteId, setOpenNoteId] = useState<number | null>(null);
+  // Editor fields — plain controlled inputs, no clever sync
   const [editTitle, setEditTitle] = useState("");
   const [editContent, setEditContent] = useState("");
   const [editFolderId, setEditFolderId] = useState<number | null>(null);
-  // Track which note the editor is currently showing
-  const [editorNoteId, setEditorNoteId] = useState<number | null>(null);
+  // Track which note these fields belong to, so switching notes reloads them
+  const loadedForId = useRef<number | null>(null);
 
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [creating, setCreating] = useState(false);
 
-  // New folder state
   const [showNewFolder, setShowNewFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
-  const [creatingFolder, setCreatingFolder] = useState(false);
 
-  const loadAll = useCallback(async () => {
-    try {
-      const [f, n] = await Promise.all([
-        fetch(`${BASE}/api/portal/admin/cases/${caseId}/folders`, { credentials: "include" }).then(r => r.json()),
-        fetch(`${BASE}/api/portal/admin/cases/${caseId}/case-notes`, { credentials: "include" }).then(r => r.json()),
-      ]);
-      setFolders(Array.isArray(f) ? f : []);
-      setNotes(Array.isArray(n) ? n : []);
-    } catch (e) {
-      console.error("CaseNotes: loadAll failed", e);
-      setError("Failed to load notes.");
-    }
+  // ── Data loading ──────────────────────────────────────────────────────────
+
+  const fetchNotes = useCallback(async () => {
+    const [f, n] = await Promise.all([
+      fetch(`${BASE}/api/portal/admin/cases/${caseId}/folders`, { credentials: "include" }).then(r => r.json()),
+      fetch(`${BASE}/api/portal/admin/cases/${caseId}/case-notes`, { credentials: "include" }).then(r => r.json()),
+    ]);
+    setFolders(Array.isArray(f) ? f : []);
+    setNotes(Array.isArray(n) ? n : []);
   }, [caseId]);
 
-  useEffect(() => { loadAll(); }, [loadAll]);
-
-  // Sync editor ONLY when switching to a different note
   useEffect(() => {
-    if (selectedNoteId === editorNoteId) return; // note didn't change — preserve typing
-    if (selectedNoteId === null) {
-      setEditTitle(""); setEditContent(""); setEditFolderId(null);
-      setEditorNoteId(null);
-      return;
+    fetchNotes().catch(() => setError("Failed to load notes."));
+  }, [fetchNotes]);
+
+  // ── Sync editor when a different note is opened ───────────────────────────
+
+  // openNote: opens a note and populates the editor with its data.
+  // Only call this to SWITCH notes — never to refresh while the user is typing.
+  const openNote = useCallback((note: CaseNote) => {
+    setOpenNoteId(note.id);
+    setEditTitle(note.title);
+    setEditContent(note.content);
+    setEditFolderId(note.folderId);
+    loadedForId.current = note.id;
+  }, []);
+
+  const closeNote = useCallback(() => {
+    setOpenNoteId(null);
+    setEditTitle("");
+    setEditContent("");
+    setEditFolderId(null);
+    loadedForId.current = null;
+  }, []);
+
+  // When the notes list refreshes, patch the editor title/content ONLY if
+  // the currently open note changed on the server (e.g. the save landed).
+  // Never overwrite mid-typing — only apply if loadedForId matches.
+  useEffect(() => {
+    if (loadedForId.current === null) return;
+    const refreshed = notes.find(n => n.id === loadedForId.current);
+    if (!refreshed) {
+      // Note was deleted externally
+      closeNote();
     }
-    // Find in current notes state
-    setNotes(current => {
-      const note = current.find(n => n.id === selectedNoteId);
-      if (note) {
-        setEditTitle(note.title);
-        setEditContent(note.content);
-        setEditFolderId(note.folderId);
-        setEditorNoteId(note.id);
-      }
-      return current; // no actual change, just reading
-    });
-  }, [selectedNoteId, editorNoteId]);
+    // We intentionally do NOT reset editTitle/editContent here.
+    // After a successful save, we already hold the saved values in state.
+  }, [notes, closeNote]);
+
+  // ── Computed ──────────────────────────────────────────────────────────────
 
   const visibleNotes = notes.filter(n => {
     if (selectedFolder === "all") return true;
@@ -88,131 +100,126 @@ export default function CaseNotes({ caseId, adminId }: { caseId: number; adminId
     return n.folderId === selectedFolder;
   });
 
-  const selectedNote = notes.find(n => n.id === selectedNoteId) ?? null;
+  const openNote_ = openNoteId !== null ? notes.find(n => n.id === openNoteId) ?? null : null;
 
-  const createNote = async (overrideFolderId?: number | null) => {
+  // ── CRUD ──────────────────────────────────────────────────────────────────
+
+  const handleCreate = async (folderId: number | null = null) => {
     setCreating(true);
     setError("");
     try {
-      const folderId = overrideFolderId !== undefined
-        ? overrideFolderId
-        : (selectedFolder === "all" || selectedFolder === "unfiled" ? null : selectedFolder as number);
-
       const res = await fetch(`${BASE}/api/portal/admin/cases/${caseId}/case-notes`, {
-        method: "POST", credentials: "include",
+        method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: "Untitled Note", content: "", folderId }),
       });
-
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        console.error("CaseNotes: createNote failed", res.status, body);
-        setError(`Could not create note (${res.status}${body?.error ? ": " + body.error : ""}).`);
+        setError(`Could not create note (${res.status}${body.error ? ": " + body.error : ""}).`);
         return;
       }
-
       const note: CaseNote = await res.json();
-      // Add to local state immediately, then reload
       setNotes(prev => [note, ...prev]);
-      setEditorNoteId(null); // force editor sync on next effect
-      setSelectedNoteId(note.id);
-      // Reload in background to get authorName etc.
-      loadAll();
-    } catch (e) {
-      console.error("CaseNotes: createNote error", e);
+      openNote(note);
+    } catch {
       setError("Network error — could not create note.");
     } finally {
       setCreating(false);
     }
   };
 
-  // When selected note changes after create, sync editor
-  useEffect(() => {
-    if (selectedNoteId === null || selectedNoteId === editorNoteId) return;
-    const note = notes.find(n => n.id === selectedNoteId);
-    if (note) {
-      setEditTitle(note.title);
-      setEditContent(note.content);
-      setEditFolderId(note.folderId);
-      setEditorNoteId(note.id);
-    }
-  }, [selectedNoteId, notes, editorNoteId]);
-
-  const saveNote = async () => {
-    if (!selectedNoteId) return;
-    setSaving(true); setSaved(false); setError("");
+  const handleSave = async () => {
+    if (openNoteId === null) return;
+    setSaving(true);
+    setSaved(false);
+    setError("");
     try {
-      const res = await fetch(`${BASE}/api/portal/admin/case-notes/${selectedNoteId}`, {
-        method: "PATCH", credentials: "include",
+      const res = await fetch(`${BASE}/api/portal/admin/case-notes/${openNoteId}`, {
+        method: "PATCH",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: editTitle || "Untitled Note", content: editContent, folderId: editFolderId }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        console.error("CaseNotes: saveNote failed", res.status, body);
-        setError(`Save failed (${res.status}${body?.error ? ": " + body.error : ""}).`);
+        setError(`Save failed (${res.status}${body.error ? ": " + body.error : ""}).`);
         return;
       }
       const updated: CaseNote = await res.json();
-      // Update in local state without a full reload (avoids resetting editor)
-      setNotes(prev => prev.map(n => n.id === updated.id ? { ...n, title: updated.title, content: updated.content, folderId: updated.folderId, updatedAt: updated.updatedAt } : n));
+      // Update the notes list in place so the sidebar preview reflects the new title/content.
+      setNotes(prev => prev.map(n => n.id === updated.id ? updated : n));
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
-    } catch (e) {
-      console.error("CaseNotes: saveNote error", e);
+    } catch {
       setError("Network error — could not save.");
     } finally {
       setSaving(false);
     }
   };
 
-  const deleteNote = async (noteId: number) => {
+  const handleDelete = async (noteId: number) => {
     if (!confirm("Delete this note? This cannot be undone.")) return;
+    setError("");
     try {
-      await fetch(`${BASE}/api/portal/admin/case-notes/${noteId}`, { method: "DELETE", credentials: "include" });
-      if (selectedNoteId === noteId) {
-        setSelectedNoteId(null);
-        setEditorNoteId(null);
-      }
+      const res = await fetch(`${BASE}/api/portal/admin/case-notes/${noteId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) { setError("Could not delete note."); return; }
       setNotes(prev => prev.filter(n => n.id !== noteId));
+      if (openNoteId === noteId) closeNote();
     } catch {
-      setError("Could not delete note.");
+      setError("Network error — could not delete.");
     }
   };
 
-  const createFolder = async () => {
+  const handleCreateFolder = async () => {
     if (!newFolderName.trim()) return;
-    setCreatingFolder(true);
+    setError("");
     try {
       const res = await fetch(`${BASE}/api/portal/admin/cases/${caseId}/folders`, {
-        method: "POST", credentials: "include",
+        method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: newFolderName.trim() }),
       });
-      if (!res.ok) { setError("Failed to create folder."); return; }
-      const folder: NoteFolder = await res.json();
-      setFolders(prev => [...prev, folder].sort((a, b) => a.name.localeCompare(b.name)));
-      setSelectedFolder(folder.id);
-      setNewFolderName(""); setShowNewFolder(false);
+      if (!res.ok) { setError("Could not create folder."); return; }
+      const f: NoteFolder = await res.json();
+      setFolders(prev => [...prev, f].sort((a, b) => a.name.localeCompare(b.name)));
+      setSelectedFolder(f.id);
+      setNewFolderName("");
+      setShowNewFolder(false);
     } catch {
       setError("Network error — could not create folder.");
-    } finally { setCreatingFolder(false); }
-  };
-
-  const deleteFolder = async (folderId: number) => {
-    if (!confirm("Delete this folder? Notes inside will become unfiled.")) return;
-    try {
-      await fetch(`${BASE}/api/portal/admin/folders/${folderId}`, { method: "DELETE", credentials: "include" });
-      if (selectedFolder === folderId) setSelectedFolder("all");
-      setFolders(prev => prev.filter(f => f.id !== folderId));
-      setNotes(prev => prev.map(n => n.folderId === folderId ? { ...n, folderId: null } : n));
-    } catch {
-      setError("Could not delete folder.");
     }
   };
 
+  const handleDeleteFolder = async (folderId: number) => {
+    if (!confirm("Delete this folder? Notes inside will become unfiled.")) return;
+    setError("");
+    try {
+      const res = await fetch(`${BASE}/api/portal/admin/folders/${folderId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) { setError("Could not delete folder."); return; }
+      setFolders(prev => prev.filter(f => f.id !== folderId));
+      setNotes(prev => prev.map(n => n.folderId === folderId ? { ...n, folderId: null } : n));
+      if (selectedFolder === folderId) setSelectedFolder("all");
+    } catch {
+      setError("Network error — could not delete folder.");
+    }
+  };
+
+  // ── Render ────────────────────────────────────────────────────────────────
+
+  const folderIdForCreate = selectedFolder === "all" || selectedFolder === "unfiled"
+    ? null
+    : selectedFolder as number;
+
   return (
-    <div className="border border-white/10 rounded-lg overflow-hidden bg-white/2">
+    <div className="border border-white/10 rounded-lg bg-white/2" style={{ overflow: "hidden" }}>
       {/* Header */}
       <div className="px-8 py-5 border-b border-white/8 flex items-center justify-between">
         <h2 className="font-serif text-xl text-foreground">Investigator Notes</h2>
@@ -220,229 +227,204 @@ export default function CaseNotes({ caseId, adminId }: { caseId: number; adminId
       </div>
 
       {error && (
-        <div className="mx-6 mt-4 flex items-center gap-2 text-red-400 text-xs">
+        <div className="mx-6 mt-3 flex items-center gap-2 text-red-400 text-xs border border-red-900/40 bg-red-900/10 rounded px-3 py-2">
           <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-          <span>{error}</span>
-          <button onClick={() => setError("")} className="ml-auto text-muted-foreground hover:text-foreground">✕</button>
+          <span className="flex-1">{error}</span>
+          <button onClick={() => setError("")} className="opacity-60 hover:opacity-100 ml-2">✕</button>
         </div>
       )}
 
-      <div className="flex" style={{ height: "520px" }}>
-        {/* Folder sidebar */}
-        <div className="w-52 shrink-0 border-r border-white/8 flex flex-col overflow-hidden">
-          <div className="p-3 space-y-0.5 flex-1 overflow-y-auto">
-            {/* Virtual folders */}
-            {[
-              { key: "all" as FolderView, label: "All Notes", count: notes.length },
-              { key: "unfiled" as FolderView, label: "Unfiled", count: notes.filter(n => n.folderId === null).length },
-            ].map(({ key, label, count }) => (
-              <button
-                key={key}
-                onClick={() => setSelectedFolder(key)}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded text-xs transition-colors text-left ${
-                  selectedFolder === key
-                    ? "bg-primary/15 text-primary"
-                    : "text-muted-foreground hover:text-foreground hover:bg-white/5"
-                }`}
-              >
-                {selectedFolder === key ? <FolderOpen className="w-3.5 h-3.5 shrink-0" /> : <Folder className="w-3.5 h-3.5 shrink-0" />}
-                <span className="flex-1 truncate">{label}</span>
-                <span className="text-[10px] opacity-50">{count}</span>
-              </button>
-            ))}
+      {/* Three-column layout */}
+      <div style={{ display: "flex", height: "520px" }}>
 
-            {/* Named folders */}
+        {/* ── Folder sidebar ──────────────────────────── */}
+        <div style={{ width: 200, flexShrink: 0, borderRight: "1px solid rgba(255,255,255,0.08)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          <div style={{ flex: 1, overflowY: "auto", padding: "12px", display: "flex", flexDirection: "column", gap: 2 }}>
+            {(["all", "unfiled"] as const).map(key => {
+              const label = key === "all" ? "All Notes" : "Unfiled";
+              const count = key === "all" ? notes.length : notes.filter(n => n.folderId === null).length;
+              const active = selectedFolder === key;
+              return (
+                <button key={key} onClick={() => setSelectedFolder(key)}
+                  style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderRadius: 4, fontSize: 12, textAlign: "left", width: "100%", background: active ? "rgba(192,57,43,0.15)" : "transparent", color: active ? "var(--primary)" : "var(--muted-foreground)", border: "none", cursor: "pointer" }}>
+                  {active ? <FolderOpen size={13} style={{ flexShrink: 0 }} /> : <Folder size={13} style={{ flexShrink: 0 }} />}
+                  <span style={{ flex: 1, textAlign: "left", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</span>
+                  <span style={{ fontSize: 10, opacity: 0.5 }}>{count}</span>
+                </button>
+              );
+            })}
+
             {folders.length > 0 && (
-              <div className="pt-2 pb-1">
-                <div className="px-3 text-[10px] tracking-[0.15em] uppercase text-muted-foreground/50">Folders</div>
+              <div style={{ paddingTop: 8, paddingBottom: 4 }}>
+                <div style={{ fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--muted-foreground)", opacity: 0.5, paddingLeft: 10 }}>Folders</div>
               </div>
             )}
             {folders.map(f => {
               const count = notes.filter(n => n.folderId === f.id).length;
               const active = selectedFolder === f.id;
               return (
-                <div key={f.id} className="group flex items-center">
-                  <button
-                    onClick={() => setSelectedFolder(f.id)}
-                    className={`flex-1 flex items-center gap-2.5 px-3 py-2 rounded text-xs transition-colors text-left min-w-0 ${
-                      active ? "bg-primary/15 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-white/5"
-                    }`}
-                  >
-                    {active ? <FolderOpen className="w-3.5 h-3.5 shrink-0" /> : <Folder className="w-3.5 h-3.5 shrink-0" />}
-                    <span className="flex-1 truncate">{f.name}</span>
-                    <span className="text-[10px] opacity-50">{count}</span>
+                <div key={f.id} style={{ display: "flex", alignItems: "center", position: "relative" }} className="group">
+                  <button onClick={() => setSelectedFolder(f.id)}
+                    style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderRadius: 4, fontSize: 12, textAlign: "left", minWidth: 0, background: active ? "rgba(192,57,43,0.15)" : "transparent", color: active ? "var(--primary)" : "var(--muted-foreground)", border: "none", cursor: "pointer" }}>
+                    {active ? <FolderOpen size={13} style={{ flexShrink: 0 }} /> : <Folder size={13} style={{ flexShrink: 0 }} />}
+                    <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.name}</span>
+                    <span style={{ fontSize: 10, opacity: 0.5 }}>{count}</span>
                   </button>
-                  <button
-                    onClick={() => deleteFolder(f.id)}
-                    className="mr-2 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-red-400"
-                  >
-                    <Trash2 className="w-3 h-3" />
+                  <button onClick={() => handleDeleteFolder(f.id)}
+                    style={{ padding: "0 8px", background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", flexShrink: 0 }}
+                    className="opacity-0 group-hover:opacity-100">
+                    <Trash2 size={11} />
                   </button>
                 </div>
               );
             })}
           </div>
 
-          {/* New folder */}
-          <div className="p-3 border-t border-white/8 shrink-0">
+          {/* New folder input */}
+          <div style={{ padding: 12, borderTop: "1px solid rgba(255,255,255,0.08)", flexShrink: 0 }}>
             {showNewFolder ? (
-              <div className="space-y-2">
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 <input
                   autoFocus
                   value={newFolderName}
                   onChange={e => setNewFolderName(e.target.value)}
                   onKeyDown={e => {
-                    if (e.key === "Enter") createFolder();
+                    if (e.key === "Enter") handleCreateFolder();
                     if (e.key === "Escape") { setShowNewFolder(false); setNewFolderName(""); }
                   }}
                   placeholder="Folder name…"
-                  className="w-full bg-black border border-white/15 rounded px-2.5 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/60"
+                  style={{ width: "100%", background: "black", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 4, padding: "5px 8px", fontSize: 12, color: "var(--foreground)", outline: "none", boxSizing: "border-box" }}
                 />
-                <div className="flex gap-1.5">
-                  <button
-                    onClick={createFolder}
-                    disabled={creatingFolder || !newFolderName.trim()}
-                    className="flex-1 bg-primary/20 text-primary text-[10px] uppercase tracking-wider py-1 rounded disabled:opacity-50"
-                  >
-                    {creatingFolder ? "…" : "Create"}
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button onClick={handleCreateFolder} disabled={!newFolderName.trim()}
+                    style={{ flex: 1, background: "rgba(192,57,43,0.2)", color: "var(--primary)", border: "none", borderRadius: 4, padding: "4px 0", fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer" }}>
+                    Create
                   </button>
-                  <button
-                    onClick={() => { setShowNewFolder(false); setNewFolderName(""); }}
-                    className="flex-1 text-muted-foreground text-[10px] uppercase tracking-wider py-1 rounded hover:text-foreground"
-                  >
+                  <button onClick={() => { setShowNewFolder(false); setNewFolderName(""); }}
+                    style={{ flex: 1, background: "none", border: "none", borderRadius: 4, padding: "4px 0", fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted-foreground)", cursor: "pointer" }}>
                     Cancel
                   </button>
                 </div>
               </div>
             ) : (
-              <button
-                onClick={() => setShowNewFolder(true)}
-                className="w-full flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors text-xs py-1"
-              >
-                <Plus className="w-3.5 h-3.5" /> New Folder
+              <button onClick={() => setShowNewFolder(true)}
+                style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: "var(--muted-foreground)", fontSize: 12, cursor: "pointer", padding: "4px 0", width: "100%" }}>
+                <Plus size={13} /> New Folder
               </button>
             )}
           </div>
         </div>
 
-        {/* Notes list */}
-        <div className="w-56 shrink-0 border-r border-white/8 flex flex-col overflow-hidden">
-          <div className="p-3 border-b border-white/8 shrink-0">
-            <button
-              onClick={() => createNote()}
-              disabled={creating}
-              className="w-full flex items-center justify-center gap-2 bg-primary/10 hover:bg-primary/20 border border-primary/30 text-primary text-xs tracking-[0.12em] uppercase px-3 py-2 rounded transition-colors disabled:opacity-60"
-            >
-              <Plus className="w-3.5 h-3.5" />{creating ? "Creating…" : "New Note"}
+        {/* ── Notes list ──────────────────────────────── */}
+        <div style={{ width: 210, flexShrink: 0, borderRight: "1px solid rgba(255,255,255,0.08)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          <div style={{ padding: 10, borderBottom: "1px solid rgba(255,255,255,0.08)", flexShrink: 0 }}>
+            <button onClick={() => handleCreate(folderIdForCreate)} disabled={creating}
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%", background: "rgba(192,57,43,0.1)", border: "1px solid rgba(192,57,43,0.3)", borderRadius: 4, color: "var(--primary)", fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", padding: "8px 0", cursor: creating ? "wait" : "pointer", opacity: creating ? 0.6 : 1 }}>
+              <Plus size={13} /> {creating ? "Creating…" : "New Note"}
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto">
+          <div style={{ flex: 1, overflowY: "auto" }}>
             {visibleNotes.length === 0 ? (
-              <button
-                onClick={() => createNote(selectedFolder === "all" || selectedFolder === "unfiled" ? null : selectedFolder as number)}
-                disabled={creating}
-                className="w-full p-6 text-center text-muted-foreground text-xs hover:text-primary transition-colors disabled:opacity-50 flex flex-col items-center gap-2"
-              >
-                <Plus className="w-4 h-4 opacity-40" />
-                <span>No notes here.<br />Click to create one.</span>
+              <button onClick={() => handleCreate(folderIdForCreate)} disabled={creating}
+                style={{ width: "100%", padding: "24px 16px", background: "none", border: "none", color: "var(--muted-foreground)", fontSize: 12, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+                <Plus size={16} style={{ opacity: 0.4 }} />
+                <span>No notes here.<br />Click to add one.</span>
               </button>
             ) : (
               visibleNotes.map(note => {
-                const active = selectedNoteId === note.id;
+                const active = openNoteId === note.id;
                 return (
-                  <button
-                    key={note.id}
-                    onClick={() => setSelectedNoteId(note.id)}
-                    className={`w-full text-left px-4 py-3 border-b border-white/5 transition-colors ${
-                      active ? "bg-primary/10 border-l-2 border-l-primary" : "hover:bg-white/3"
-                    }`}
-                  >
-                    <div className="flex items-start gap-1.5">
-                      <FileText className={`w-3 h-3 mt-0.5 shrink-0 ${active ? "text-primary" : "text-muted-foreground"}`} />
-                      <div className="min-w-0">
-                        <p className={`text-xs font-medium truncate ${active ? "text-primary" : "text-foreground"}`}>
-                          {note.title || "Untitled Note"}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground mt-0.5 truncate">
-                          {note.content ? note.content.slice(0, 40) + (note.content.length > 40 ? "…" : "") : "No content"}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground/50 mt-1">{timeAgo(note.updatedAt)}</p>
+                  <div key={note.id} className="group"
+                    style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", background: active ? "rgba(192,57,43,0.1)" : "transparent", borderLeft: active ? "2px solid var(--primary)" : "2px solid transparent", position: "relative" }}>
+                    {/* Clickable note body */}
+                    <button onClick={() => openNote(note)}
+                      style={{ width: "100%", textAlign: "left", padding: "10px 14px 10px 12px", background: "none", border: "none", cursor: "pointer", display: "block", paddingRight: 56 }}>
+                      <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
+                        <FileText size={11} style={{ marginTop: 2, flexShrink: 0, color: active ? "var(--primary)" : "var(--muted-foreground)" }} />
+                        <div style={{ minWidth: 0 }}>
+                          <p style={{ fontSize: 12, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: active ? "var(--primary)" : "var(--foreground)", margin: 0 }}>
+                            {note.title || "Untitled Note"}
+                          </p>
+                          <p style={{ fontSize: 10, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 2 }}>
+                            {note.content ? note.content.slice(0, 40) + (note.content.length > 40 ? "…" : "") : "No content"}
+                          </p>
+                          <p style={{ fontSize: 10, color: "var(--muted-foreground)", opacity: 0.5, marginTop: 4 }}>{timeAgo(note.updatedAt)}</p>
+                        </div>
                       </div>
+                    </button>
+                    {/* Edit + Delete actions — visible on row hover */}
+                    <div className="opacity-0 group-hover:opacity-100"
+                      style={{ position: "absolute", top: "50%", right: 8, transform: "translateY(-50%)", display: "flex", gap: 2, transition: "opacity 0.15s" }}>
+                      <button onClick={() => openNote(note)} title="Edit"
+                        style={{ padding: "4px 5px", background: "rgba(0,0,0,0.6)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 3, cursor: "pointer", color: "var(--muted-foreground)", display: "flex", alignItems: "center" }}>
+                        <Pencil size={10} />
+                      </button>
+                      <button onClick={e => { e.stopPropagation(); handleDelete(note.id); }} title="Delete"
+                        style={{ padding: "4px 5px", background: "rgba(0,0,0,0.6)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 3, cursor: "pointer", color: "var(--muted-foreground)", display: "flex", alignItems: "center" }}>
+                        <Trash2 size={10} />
+                      </button>
                     </div>
-                  </button>
+                  </div>
                 );
               })
             )}
           </div>
         </div>
 
-        {/* Editor */}
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-          {selectedNote === null ? (
-            <button
-              onClick={() => createNote()}
-              disabled={creating}
-              className="flex-1 flex flex-col items-center justify-center gap-3 text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
-            >
-              <FileText className="w-8 h-8 opacity-20" />
-              <p className="text-sm">Select a note or click to create one</p>
-              <span className="text-xs text-primary flex items-center gap-1">
-                <Plus className="w-3 h-3" /> {creating ? "Creating…" : "New Note"}
-              </span>
-            </button>
+        {/* ── Editor ──────────────────────────────────── */}
+        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          {openNote_ === null ? (
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, color: "var(--muted-foreground)" }}>
+              <FileText size={32} style={{ opacity: 0.15 }} />
+              <p style={{ fontSize: 13, margin: 0 }}>Select a note or create one</p>
+              <button onClick={() => handleCreate(folderIdForCreate)} disabled={creating}
+                style={{ fontSize: 12, color: "var(--primary)", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+                <Plus size={12} /> {creating ? "Creating…" : "New Note"}
+              </button>
+            </div>
           ) : (
             <>
-              {/* Editor toolbar */}
-              <div className="px-6 py-3 border-b border-white/8 flex items-center justify-between gap-4 shrink-0">
-                <div className="flex items-center gap-2 text-[10px] text-muted-foreground/60 min-w-0">
-                  <span>Created {new Date(selectedNote.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
-                  {selectedNote.authorName && (
-                    <><ChevronRight className="w-3 h-3" /><span>{selectedNote.authorName}</span></>
-                  )}
+              {/* Toolbar */}
+              <div style={{ padding: "8px 20px", borderBottom: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexShrink: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10, color: "var(--muted-foreground)", opacity: 0.6, minWidth: 0 }}>
+                  <span>{new Date(openNote_.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+                  {openNote_.authorName && <><ChevronRight size={10} /><span>{openNote_.authorName}</span></>}
                 </div>
-                <div className="flex items-center gap-3 shrink-0">
-                  {/* Move to folder */}
-                  <select
-                    value={editFolderId ?? ""}
-                    onChange={e => setEditFolderId(e.target.value === "" ? null : Number(e.target.value))}
-                    className="bg-black border border-white/10 rounded px-2 py-1 text-[10px] text-muted-foreground focus:outline-none focus:border-primary/40"
-                  >
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+                  <select value={editFolderId ?? ""} onChange={e => setEditFolderId(e.target.value === "" ? null : Number(e.target.value))}
+                    style={{ background: "black", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 4, padding: "3px 6px", fontSize: 10, color: "var(--muted-foreground)", outline: "none" }}>
                     <option value="">Unfiled</option>
                     {folders.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
                   </select>
-                  {saved && <span className="text-[10px] text-green-400">Saved ✓</span>}
-                  <button
-                    onClick={saveNote}
-                    disabled={saving}
-                    className="bg-primary/20 hover:bg-primary/30 text-primary text-[10px] tracking-[0.12em] uppercase px-3 py-1.5 rounded transition-colors disabled:opacity-50"
-                  >
+                  {saved && <span style={{ fontSize: 10, color: "#4ade80" }}>Saved ✓</span>}
+                  <button onClick={handleSave} disabled={saving}
+                    style={{ background: "rgba(192,57,43,0.2)", color: "var(--primary)", border: "none", borderRadius: 4, padding: "5px 10px", fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", cursor: saving ? "wait" : "pointer", opacity: saving ? 0.5 : 1 }}>
                     {saving ? "Saving…" : "Save"}
                   </button>
-                  <button onClick={() => deleteNote(selectedNote.id)} className="text-muted-foreground hover:text-red-400 transition-colors">
-                    <Trash2 className="w-3.5 h-3.5" />
+                  <button onClick={() => handleDelete(openNote_.id)}
+                    style={{ background: "none", border: "none", color: "var(--muted-foreground)", cursor: "pointer", padding: 2 }}>
+                    <Trash2 size={13} />
                   </button>
                 </div>
               </div>
 
               {/* Title */}
               <input
+                type="text"
                 value={editTitle}
                 onChange={e => setEditTitle(e.target.value)}
                 placeholder="Note title"
-                className="px-6 pt-5 pb-2 bg-transparent text-base font-serif text-foreground placeholder:text-muted-foreground/30 focus:outline-none border-none shrink-0"
+                style={{ padding: "18px 20px 6px", background: "transparent", border: "none", fontSize: 15, fontFamily: "var(--font-serif, serif)", color: "var(--foreground)", outline: "none", flexShrink: 0, width: "100%", boxSizing: "border-box" }}
               />
 
-              {/* Content */}
+              {/* Body */}
               <textarea
                 value={editContent}
                 onChange={e => setEditContent(e.target.value)}
                 placeholder="Start writing…"
-                className="flex-1 px-6 pb-6 bg-transparent text-sm text-foreground/90 placeholder:text-muted-foreground/30 focus:outline-none resize-none leading-relaxed"
-                style={{ minHeight: 0 }}
-                onKeyDown={e => {
-                  if ((e.metaKey || e.ctrlKey) && e.key === "s") { e.preventDefault(); saveNote(); }
-                }}
+                onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === "s") { e.preventDefault(); handleSave(); } }}
+                style={{ flex: 1, padding: "4px 20px 20px", background: "transparent", border: "none", fontSize: 13, color: "var(--foreground)", opacity: 0.9, outline: "none", resize: "none", lineHeight: 1.7, minHeight: 0, width: "100%", boxSizing: "border-box", fontFamily: "inherit" }}
               />
             </>
           )}
