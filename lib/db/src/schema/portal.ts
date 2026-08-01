@@ -64,6 +64,41 @@ export const portalDocumentsTable = pgTable("portal_documents", {
 export type PortalDocument = typeof portalDocumentsTable.$inferSelect;
 export type InsertPortalDocument = typeof portalDocumentsTable.$inferInsert;
 
+// ── Note Folders ─────────────────────────────────────────────────────────────
+
+export const portalNoteFoldersTable = pgTable("portal_note_folders", {
+  id: serial("id").primaryKey(),
+  caseId: integer("case_id")
+    .notNull()
+    .references(() => portalCasesTable.id),
+  name: text("name").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type PortalNoteFolder = typeof portalNoteFoldersTable.$inferSelect;
+export type InsertPortalNoteFolder = typeof portalNoteFoldersTable.$inferInsert;
+
+// ── Case Notes ────────────────────────────────────────────────────────────────
+
+export const portalCaseNotesTable = pgTable("portal_case_notes", {
+  id: serial("id").primaryKey(),
+  caseId: integer("case_id")
+    .notNull()
+    .references(() => portalCasesTable.id),
+  folderId: integer("folder_id")
+    .references(() => portalNoteFoldersTable.id),
+  authorId: integer("author_id")
+    .notNull()
+    .references(() => portalUsersTable.id),
+  title: text("title").notNull().default("Untitled Note"),
+  content: text("content").notNull().default(""),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type PortalCaseNote = typeof portalCaseNotesTable.$inferSelect;
+export type InsertPortalCaseNote = typeof portalCaseNotesTable.$inferInsert;
+
 // ── Messages ─────────────────────────────────────────────────────────────────
 
 export const portalMessagesTable = pgTable("portal_messages", {

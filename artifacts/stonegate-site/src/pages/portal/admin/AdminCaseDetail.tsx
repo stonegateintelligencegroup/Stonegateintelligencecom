@@ -1,6 +1,8 @@
 import { useEffect, useState, useRef } from "react";
 import { useLocation, useParams } from "wouter";
 import { ArrowLeft, Upload, Download, Send, FileText, AlertCircle } from "lucide-react";
+import CaseNotes from "./CaseNotes";
+import { useAuth } from "@/lib/auth";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -23,6 +25,7 @@ export default function AdminCaseDetail() {
   const params = useParams<{ id: string }>();
   const caseId = Number(params.id);
   const [, setLocation] = useLocation();
+  const { user } = useAuth();
 
   const [caseData, setCaseData] = useState<Case | null>(null);
   const [docs, setDocs] = useState<Doc[]>([]);
@@ -244,6 +247,9 @@ export default function AdminCaseDetail() {
             </div>
           )}
         </div>
+
+        {/* Investigator Notes */}
+        <CaseNotes caseId={caseId} adminId={user?.id ?? 0} />
 
         {/* Messages */}
         <div>

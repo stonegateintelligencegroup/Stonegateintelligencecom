@@ -6,6 +6,8 @@ import {
   portalCasesTable,
   portalDocumentsTable,
   portalMessagesTable,
+  portalNoteFoldersTable,
+  portalCaseNotesTable,
 } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import { requireAdmin } from "../../middlewares/auth";
@@ -250,6 +252,104 @@ router.delete("/documents/file/:docId", async (req: Request, res: Response) => {
     return;
   }
 
+  res.json({ ok: true });
+});
+
+// ── Note Folders ─────────────────────────────────────────────────────────────
+
+// GET /api/portal/admin/cases/:id/folders
+router.get("/cases/:id/folders", async (req: Request, res: Response) => {
+  const folders = await db
+    .select()
+    .from(portalNoteFoldersTable)
+    .where(eq(portalNoteFoldersTable.caseId, Number(req.params.id)))
+    .orderBy(portalNoteFoldersTable.name);
+  res.json(folders);
+});
+
+// POST /api/portal/admin/cases/:id/folders
+router.post("/cases/:id/folders", async (req: Request, res: Response) => {
+  const { name } = req.body;
+  if (!name?.trim()) { res.status(400).json({ error: "name is required." }); return; }
+  const [folder] = await db
+    .insert(portalNoteFoldersTable)
+    .values({ caseId: Number(req.params.id), name: name.trim() })
+    .returning();
+  res.json(folder);
+});
+
+// DELETE /api/portal/admin/folders/:folderId
+router.delete("/folders/:folderId", async (req: Request, res: Response) => {
+  // Unfile notes in this folder before deleting
+  await db
+    .update(portalCaseNotesTable)
+    .set({ folderId: null })
+    .where(eq(portalCaseNotesTable.folderId, Number(req.params.folderId)));
+  await db
+    .delete(portalNoteFoldersTable)
+    .where(eq(portalNoteFoldersTable.id, Number(req.params.folderId)));
+  res.json({ ok: true });
+});
+
+// ── Case Notes ────────────────────────────────────────────────────────────────
+
+// GET /api/portal/admin/cases/:id/case-notes
+router.get("/cases/:id/case-notes", async (req: Request, res: Response) => {
+  const notes = await db
+    .select({
+      id: portalCaseNotesTable.id,
+      title: portalCaseNotesTable.title,
+      content: portalCaseNotesTable.content,
+      folderId: portalCaseNotesTable.folderId,
+      authorName: portalUsersTable.name,
+      createdAt: portalCaseNotesTable.createdAt,
+      updatedAt: portalCaseNotesTable.updatedAt,
+    })
+    .from(portalCaseNotesTable)
+    .leftJoin(portalUsersTable, eq(portalCaseNotesTable.authorId, portalUsersTable.id))
+    .where(eq(portalCaseNotesTable.caseId, Number(req.params.id)))
+    .orderBy(desc(portalCaseNotesTable.updatedAt));
+  res.json(notes);
+});
+
+// POST /api/portal/admin/cases/:id/case-notes
+router.post("/cases/:id/case-notes", async (req: Request, res: Response) => {
+  const { title, content, folderId } = req.body;
+  const [note] = await db
+    .insert(portalCaseNotesTable)
+    .values({
+      caseId: Number(req.params.id),
+      authorId: req.session.userId!,
+      title: title || "Untitled Note",
+      content: content || "",
+      folderId: folderId ? Number(folderId) : null,
+    })
+    .returning();
+  res.json(note);
+});
+
+// PATCH /api/portal/admin/case-notes/:noteId
+router.patch("/case-notes/:noteId", async (req: Request, res: Response) => {
+  const { title, content, folderId } = req.body;
+  const [updated] = await db
+    .update(portalCaseNotesTable)
+    .set({
+      ...(title !== undefined && { title }),
+      ...(content !== undefined && { content }),
+      ...(folderId !== undefined && { folderId: folderId ? Number(folderId) : null }),
+      updatedAt: new Date(),
+    })
+    .where(eq(portalCaseNotesTable.id, Number(req.params.noteId)))
+    .returning();
+  if (!updated) { res.status(404).json({ error: "Note not found." }); return; }
+  res.json(updated);
+});
+
+// DELETE /api/portal/admin/case-notes/:noteId
+router.delete("/case-notes/:noteId", async (req: Request, res: Response) => {
+  await db
+    .delete(portalCaseNotesTable)
+    .where(eq(portalCaseNotesTable.id, Number(req.params.noteId)));
   res.json({ ok: true });
 });
 
