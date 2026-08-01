@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Plus, Folder, FolderOpen, FileText, Trash2, ChevronRight, AlertCircle } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -41,6 +41,9 @@ export default function CaseNotes({ caseId, adminId }: { caseId: number; adminId
   const [newFolderName, setNewFolderName] = useState("");
   const [creatingFolder, setCreatingFolder] = useState(false);
 
+  // Keep a ref to notes so the editor sync effect doesn't depend on notes array
+  const notesRef = useRef<CaseNote[]>([]);
+
   const loadAll = useCallback(async () => {
     try {
       const [f, n] = await Promise.all([
@@ -48,18 +51,22 @@ export default function CaseNotes({ caseId, adminId }: { caseId: number; adminId
         fetch(`${BASE}/api/portal/admin/cases/${caseId}/case-notes`, { credentials: "include" }).then(r => r.json()),
       ]);
       setFolders(Array.isArray(f) ? f : []);
-      setNotes(Array.isArray(n) ? n : []);
+      const noteList = Array.isArray(n) ? n : [];
+      notesRef.current = noteList;
+      setNotes(noteList);
     } catch { setError("Failed to load notes."); }
   }, [caseId]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
-  // Sync editor when selected note changes
+  // Only sync editor when the SELECTED note changes — never on list reload,
+  // so background refreshes don't wipe content the user is actively typing.
   useEffect(() => {
     if (selectedNoteId === null) { setEditTitle(""); setEditContent(""); setEditFolderId(null); return; }
-    const note = notes.find(n => n.id === selectedNoteId);
+    const note = notesRef.current.find(n => n.id === selectedNoteId);
     if (note) { setEditTitle(note.title); setEditContent(note.content); setEditFolderId(note.folderId); }
-  }, [selectedNoteId, notes]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedNoteId]);
 
   const visibleNotes = notes.filter(n => {
     if (selectedFolder === "all") return true;
@@ -78,6 +85,8 @@ export default function CaseNotes({ caseId, adminId }: { caseId: number; adminId
     });
     if (!res.ok) return;
     const note = await res.json();
+    // Load the list FIRST so the note is in notesRef before we select it,
+    // otherwise the editor sync effect can't find it and shows empty.
     await loadAll();
     setSelectedNoteId(note.id);
   };
@@ -143,7 +152,7 @@ export default function CaseNotes({ caseId, adminId }: { caseId: number; adminId
         </div>
       )}
 
-      <div className="flex min-h-[480px]">
+      <div className="flex h-[520px]">
         {/* Folder sidebar */}
         <div className="w-52 shrink-0 border-r border-white/8 flex flex-col">
           <div className="p-3 space-y-0.5 flex-1">
@@ -228,7 +237,7 @@ export default function CaseNotes({ caseId, adminId }: { caseId: number; adminId
         </div>
 
         {/* Notes list */}
-        <div className="w-56 shrink-0 border-r border-white/8 flex flex-col">
+        <div className="w-56 shrink-0 border-r border-white/8 flex flex-col overflow-hidden">
           <div className="p-3 border-b border-white/8">
             <button
               onClick={createNote}
@@ -282,7 +291,7 @@ export default function CaseNotes({ caseId, adminId }: { caseId: number; adminId
               </button>
             </div>
           ) : (
-            <div className="flex flex-col h-full">
+            <div className="flex flex-col flex-1 overflow-hidden">
               {/* Editor toolbar */}
               <div className="px-6 py-3 border-b border-white/8 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-2 text-[10px] text-muted-foreground/60 min-w-0">
@@ -326,7 +335,7 @@ export default function CaseNotes({ caseId, adminId }: { caseId: number; adminId
                 value={editContent}
                 onChange={e => setEditContent(e.target.value)}
                 placeholder="Start writing…"
-                className="flex-1 px-6 pb-6 bg-transparent text-sm text-foreground/90 placeholder:text-muted-foreground/30 focus:outline-none resize-none leading-relaxed"
+                className="flex-1 min-h-0 px-6 pb-6 bg-transparent text-sm text-foreground/90 placeholder:text-muted-foreground/30 focus:outline-none resize-none leading-relaxed"
                 onKeyDown={e => {
                   if ((e.metaKey || e.ctrlKey) && e.key === "s") { e.preventDefault(); saveNote(); }
                 }}
