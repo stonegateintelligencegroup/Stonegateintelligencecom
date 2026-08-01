@@ -353,10 +353,10 @@ export default function CaseNotes({ caseId }: { caseId: number; adminId: number 
                         </div>
                       </div>
                     </button>
-                    {/* Edit + Delete actions — visible on row hover */}
-                    <div className="opacity-0 group-hover:opacity-100"
+                    {/* Edit + Delete actions — visible on row hover, pointer-events off when hidden */}
+                    <div className="opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto"
                       style={{ position: "absolute", top: "50%", right: 8, transform: "translateY(-50%)", display: "flex", gap: 2, transition: "opacity 0.15s" }}>
-                      <button onClick={() => openNote(note)} title="Edit"
+                      <button onClick={e => { e.stopPropagation(); openNote(note); }} title="Edit"
                         style={{ padding: "4px 5px", background: "rgba(0,0,0,0.6)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 3, cursor: "pointer", color: "var(--muted-foreground)", display: "flex", alignItems: "center" }}>
                         <Pencil size={10} />
                       </button>
