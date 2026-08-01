@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Plus, Folder, FolderOpen, FileText, Trash2, ChevronRight, AlertCircle } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -29,20 +29,21 @@ export default function CaseNotes({ caseId, adminId }: { caseId: number; adminId
   const [selectedNoteId, setSelectedNoteId] = useState<number | null>(null);
   const [error, setError] = useState("");
 
-  // Editor state
+  // Editor state — tracks what's currently in the editor
   const [editTitle, setEditTitle] = useState("");
   const [editContent, setEditContent] = useState("");
   const [editFolderId, setEditFolderId] = useState<number | null>(null);
+  // Track which note the editor is currently showing
+  const [editorNoteId, setEditorNoteId] = useState<number | null>(null);
+
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [creating, setCreating] = useState(false);
 
   // New folder state
   const [showNewFolder, setShowNewFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [creatingFolder, setCreatingFolder] = useState(false);
-
-  // Keep a ref to notes so the editor sync effect doesn't depend on notes array
-  const notesRef = useRef<CaseNote[]>([]);
 
   const loadAll = useCallback(async () => {
     try {
@@ -51,22 +52,35 @@ export default function CaseNotes({ caseId, adminId }: { caseId: number; adminId
         fetch(`${BASE}/api/portal/admin/cases/${caseId}/case-notes`, { credentials: "include" }).then(r => r.json()),
       ]);
       setFolders(Array.isArray(f) ? f : []);
-      const noteList = Array.isArray(n) ? n : [];
-      notesRef.current = noteList;
-      setNotes(noteList);
-    } catch { setError("Failed to load notes."); }
+      setNotes(Array.isArray(n) ? n : []);
+    } catch (e) {
+      console.error("CaseNotes: loadAll failed", e);
+      setError("Failed to load notes.");
+    }
   }, [caseId]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
-  // Only sync editor when the SELECTED note changes — never on list reload,
-  // so background refreshes don't wipe content the user is actively typing.
+  // Sync editor ONLY when switching to a different note
   useEffect(() => {
-    if (selectedNoteId === null) { setEditTitle(""); setEditContent(""); setEditFolderId(null); return; }
-    const note = notesRef.current.find(n => n.id === selectedNoteId);
-    if (note) { setEditTitle(note.title); setEditContent(note.content); setEditFolderId(note.folderId); }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedNoteId]);
+    if (selectedNoteId === editorNoteId) return; // note didn't change — preserve typing
+    if (selectedNoteId === null) {
+      setEditTitle(""); setEditContent(""); setEditFolderId(null);
+      setEditorNoteId(null);
+      return;
+    }
+    // Find in current notes state
+    setNotes(current => {
+      const note = current.find(n => n.id === selectedNoteId);
+      if (note) {
+        setEditTitle(note.title);
+        setEditContent(note.content);
+        setEditFolderId(note.folderId);
+        setEditorNoteId(note.id);
+      }
+      return current; // no actual change, just reading
+    });
+  }, [selectedNoteId, editorNoteId]);
 
   const visibleNotes = notes.filter(n => {
     if (selectedFolder === "all") return true;
@@ -76,42 +90,94 @@ export default function CaseNotes({ caseId, adminId }: { caseId: number; adminId
 
   const selectedNote = notes.find(n => n.id === selectedNoteId) ?? null;
 
-  const createNote = async () => {
-    const folderId = selectedFolder === "all" || selectedFolder === "unfiled" ? null : selectedFolder;
-    const res = await fetch(`${BASE}/api/portal/admin/cases/${caseId}/case-notes`, {
-      method: "POST", credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: "Untitled Note", content: "", folderId }),
-    });
-    if (!res.ok) return;
-    const note = await res.json();
-    // Load the list FIRST so the note is in notesRef before we select it,
-    // otherwise the editor sync effect can't find it and shows empty.
-    await loadAll();
-    setSelectedNoteId(note.id);
+  const createNote = async (overrideFolderId?: number | null) => {
+    setCreating(true);
+    setError("");
+    try {
+      const folderId = overrideFolderId !== undefined
+        ? overrideFolderId
+        : (selectedFolder === "all" || selectedFolder === "unfiled" ? null : selectedFolder as number);
+
+      const res = await fetch(`${BASE}/api/portal/admin/cases/${caseId}/case-notes`, {
+        method: "POST", credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: "Untitled Note", content: "", folderId }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        console.error("CaseNotes: createNote failed", res.status, body);
+        setError(`Could not create note (${res.status}${body?.error ? ": " + body.error : ""}).`);
+        return;
+      }
+
+      const note: CaseNote = await res.json();
+      // Add to local state immediately, then reload
+      setNotes(prev => [note, ...prev]);
+      setEditorNoteId(null); // force editor sync on next effect
+      setSelectedNoteId(note.id);
+      // Reload in background to get authorName etc.
+      loadAll();
+    } catch (e) {
+      console.error("CaseNotes: createNote error", e);
+      setError("Network error — could not create note.");
+    } finally {
+      setCreating(false);
+    }
   };
+
+  // When selected note changes after create, sync editor
+  useEffect(() => {
+    if (selectedNoteId === null || selectedNoteId === editorNoteId) return;
+    const note = notes.find(n => n.id === selectedNoteId);
+    if (note) {
+      setEditTitle(note.title);
+      setEditContent(note.content);
+      setEditFolderId(note.folderId);
+      setEditorNoteId(note.id);
+    }
+  }, [selectedNoteId, notes, editorNoteId]);
 
   const saveNote = async () => {
     if (!selectedNoteId) return;
-    setSaving(true); setSaved(false);
+    setSaving(true); setSaved(false); setError("");
     try {
       const res = await fetch(`${BASE}/api/portal/admin/case-notes/${selectedNoteId}`, {
         method: "PATCH", credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: editTitle || "Untitled Note", content: editContent, folderId: editFolderId }),
       });
-      if (!res.ok) { setError("Failed to save note."); return; }
-      await loadAll();
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        console.error("CaseNotes: saveNote failed", res.status, body);
+        setError(`Save failed (${res.status}${body?.error ? ": " + body.error : ""}).`);
+        return;
+      }
+      const updated: CaseNote = await res.json();
+      // Update in local state without a full reload (avoids resetting editor)
+      setNotes(prev => prev.map(n => n.id === updated.id ? { ...n, title: updated.title, content: updated.content, folderId: updated.folderId, updatedAt: updated.updatedAt } : n));
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
-    } finally { setSaving(false); }
+    } catch (e) {
+      console.error("CaseNotes: saveNote error", e);
+      setError("Network error — could not save.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const deleteNote = async (noteId: number) => {
     if (!confirm("Delete this note? This cannot be undone.")) return;
-    await fetch(`${BASE}/api/portal/admin/case-notes/${noteId}`, { method: "DELETE", credentials: "include" });
-    if (selectedNoteId === noteId) setSelectedNoteId(null);
-    await loadAll();
+    try {
+      await fetch(`${BASE}/api/portal/admin/case-notes/${noteId}`, { method: "DELETE", credentials: "include" });
+      if (selectedNoteId === noteId) {
+        setSelectedNoteId(null);
+        setEditorNoteId(null);
+      }
+      setNotes(prev => prev.filter(n => n.id !== noteId));
+    } catch {
+      setError("Could not delete note.");
+    }
   };
 
   const createFolder = async () => {
@@ -124,18 +190,25 @@ export default function CaseNotes({ caseId, adminId }: { caseId: number; adminId
         body: JSON.stringify({ name: newFolderName.trim() }),
       });
       if (!res.ok) { setError("Failed to create folder."); return; }
-      const folder = await res.json();
-      await loadAll();
+      const folder: NoteFolder = await res.json();
+      setFolders(prev => [...prev, folder].sort((a, b) => a.name.localeCompare(b.name)));
       setSelectedFolder(folder.id);
       setNewFolderName(""); setShowNewFolder(false);
+    } catch {
+      setError("Network error — could not create folder.");
     } finally { setCreatingFolder(false); }
   };
 
   const deleteFolder = async (folderId: number) => {
     if (!confirm("Delete this folder? Notes inside will become unfiled.")) return;
-    await fetch(`${BASE}/api/portal/admin/folders/${folderId}`, { method: "DELETE", credentials: "include" });
-    if (selectedFolder === folderId) setSelectedFolder("all");
-    await loadAll();
+    try {
+      await fetch(`${BASE}/api/portal/admin/folders/${folderId}`, { method: "DELETE", credentials: "include" });
+      if (selectedFolder === folderId) setSelectedFolder("all");
+      setFolders(prev => prev.filter(f => f.id !== folderId));
+      setNotes(prev => prev.map(n => n.folderId === folderId ? { ...n, folderId: null } : n));
+    } catch {
+      setError("Could not delete folder.");
+    }
   };
 
   return (
@@ -148,14 +221,16 @@ export default function CaseNotes({ caseId, adminId }: { caseId: number; adminId
 
       {error && (
         <div className="mx-6 mt-4 flex items-center gap-2 text-red-400 text-xs">
-          <AlertCircle className="w-3.5 h-3.5" />{error}
+          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+          <span>{error}</span>
+          <button onClick={() => setError("")} className="ml-auto text-muted-foreground hover:text-foreground">✕</button>
         </div>
       )}
 
-      <div className="flex h-[520px]">
+      <div className="flex" style={{ height: "520px" }}>
         {/* Folder sidebar */}
-        <div className="w-52 shrink-0 border-r border-white/8 flex flex-col">
-          <div className="p-3 space-y-0.5 flex-1">
+        <div className="w-52 shrink-0 border-r border-white/8 flex flex-col overflow-hidden">
+          <div className="p-3 space-y-0.5 flex-1 overflow-y-auto">
             {/* Virtual folders */}
             {[
               { key: "all" as FolderView, label: "All Notes", count: notes.length },
@@ -177,7 +252,11 @@ export default function CaseNotes({ caseId, adminId }: { caseId: number; adminId
             ))}
 
             {/* Named folders */}
-            {folders.length > 0 && <div className="pt-2 pb-1"><div className="px-3 text-[10px] tracking-[0.15em] uppercase text-muted-foreground/50">Folders</div></div>}
+            {folders.length > 0 && (
+              <div className="pt-2 pb-1">
+                <div className="px-3 text-[10px] tracking-[0.15em] uppercase text-muted-foreground/50">Folders</div>
+              </div>
+            )}
             {folders.map(f => {
               const count = notes.filter(n => n.folderId === f.id).length;
               const active = selectedFolder === f.id;
@@ -205,22 +284,32 @@ export default function CaseNotes({ caseId, adminId }: { caseId: number; adminId
           </div>
 
           {/* New folder */}
-          <div className="p-3 border-t border-white/8">
+          <div className="p-3 border-t border-white/8 shrink-0">
             {showNewFolder ? (
               <div className="space-y-2">
                 <input
                   autoFocus
                   value={newFolderName}
                   onChange={e => setNewFolderName(e.target.value)}
-                  onKeyDown={e => { if (e.key === "Enter") createFolder(); if (e.key === "Escape") { setShowNewFolder(false); setNewFolderName(""); } }}
+                  onKeyDown={e => {
+                    if (e.key === "Enter") createFolder();
+                    if (e.key === "Escape") { setShowNewFolder(false); setNewFolderName(""); }
+                  }}
                   placeholder="Folder name…"
                   className="w-full bg-black border border-white/15 rounded px-2.5 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/60"
                 />
                 <div className="flex gap-1.5">
-                  <button onClick={createFolder} disabled={creatingFolder || !newFolderName.trim()} className="flex-1 bg-primary/20 text-primary text-[10px] uppercase tracking-wider py-1 rounded disabled:opacity-50">
+                  <button
+                    onClick={createFolder}
+                    disabled={creatingFolder || !newFolderName.trim()}
+                    className="flex-1 bg-primary/20 text-primary text-[10px] uppercase tracking-wider py-1 rounded disabled:opacity-50"
+                  >
                     {creatingFolder ? "…" : "Create"}
                   </button>
-                  <button onClick={() => { setShowNewFolder(false); setNewFolderName(""); }} className="flex-1 text-muted-foreground text-[10px] uppercase tracking-wider py-1 rounded hover:text-foreground">
+                  <button
+                    onClick={() => { setShowNewFolder(false); setNewFolderName(""); }}
+                    className="flex-1 text-muted-foreground text-[10px] uppercase tracking-wider py-1 rounded hover:text-foreground"
+                  >
                     Cancel
                   </button>
                 </div>
@@ -238,18 +327,26 @@ export default function CaseNotes({ caseId, adminId }: { caseId: number; adminId
 
         {/* Notes list */}
         <div className="w-56 shrink-0 border-r border-white/8 flex flex-col overflow-hidden">
-          <div className="p-3 border-b border-white/8">
+          <div className="p-3 border-b border-white/8 shrink-0">
             <button
-              onClick={createNote}
-              className="w-full flex items-center justify-center gap-2 bg-primary/10 hover:bg-primary/20 border border-primary/30 text-primary text-xs tracking-[0.12em] uppercase px-3 py-2 rounded transition-colors"
+              onClick={() => createNote()}
+              disabled={creating}
+              className="w-full flex items-center justify-center gap-2 bg-primary/10 hover:bg-primary/20 border border-primary/30 text-primary text-xs tracking-[0.12em] uppercase px-3 py-2 rounded transition-colors disabled:opacity-60"
             >
-              <Plus className="w-3.5 h-3.5" /> New Note
+              <Plus className="w-3.5 h-3.5" />{creating ? "Creating…" : "New Note"}
             </button>
           </div>
 
           <div className="flex-1 overflow-y-auto">
             {visibleNotes.length === 0 ? (
-              <div className="p-4 text-center text-muted-foreground text-xs">No notes here</div>
+              <button
+                onClick={() => createNote(selectedFolder === "all" || selectedFolder === "unfiled" ? null : selectedFolder as number)}
+                disabled={creating}
+                className="w-full p-6 text-center text-muted-foreground text-xs hover:text-primary transition-colors disabled:opacity-50 flex flex-col items-center gap-2"
+              >
+                <Plus className="w-4 h-4 opacity-40" />
+                <span>No notes here.<br />Click to create one.</span>
+              </button>
             ) : (
               visibleNotes.map(note => {
                 const active = selectedNoteId === note.id;
@@ -281,22 +378,28 @@ export default function CaseNotes({ caseId, adminId }: { caseId: number; adminId
         </div>
 
         {/* Editor */}
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {selectedNote === null ? (
-            <div className="flex-1 flex flex-col items-center justify-center gap-3 text-muted-foreground">
+            <button
+              onClick={() => createNote()}
+              disabled={creating}
+              className="flex-1 flex flex-col items-center justify-center gap-3 text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
+            >
               <FileText className="w-8 h-8 opacity-20" />
-              <p className="text-sm">Select a note or create a new one</p>
-              <button onClick={createNote} className="text-xs text-primary hover:underline flex items-center gap-1">
-                <Plus className="w-3 h-3" /> New Note
-              </button>
-            </div>
+              <p className="text-sm">Select a note or click to create one</p>
+              <span className="text-xs text-primary flex items-center gap-1">
+                <Plus className="w-3 h-3" /> {creating ? "Creating…" : "New Note"}
+              </span>
+            </button>
           ) : (
-            <div className="flex flex-col flex-1 overflow-hidden">
+            <>
               {/* Editor toolbar */}
-              <div className="px-6 py-3 border-b border-white/8 flex items-center justify-between gap-4">
+              <div className="px-6 py-3 border-b border-white/8 flex items-center justify-between gap-4 shrink-0">
                 <div className="flex items-center gap-2 text-[10px] text-muted-foreground/60 min-w-0">
                   <span>Created {new Date(selectedNote.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
-                  {selectedNote.authorName && <><ChevronRight className="w-3 h-3" /><span>{selectedNote.authorName}</span></>}
+                  {selectedNote.authorName && (
+                    <><ChevronRight className="w-3 h-3" /><span>{selectedNote.authorName}</span></>
+                  )}
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
                   {/* Move to folder */}
@@ -327,7 +430,7 @@ export default function CaseNotes({ caseId, adminId }: { caseId: number; adminId
                 value={editTitle}
                 onChange={e => setEditTitle(e.target.value)}
                 placeholder="Note title"
-                className="px-6 pt-5 pb-2 bg-transparent text-base font-serif text-foreground placeholder:text-muted-foreground/30 focus:outline-none border-none"
+                className="px-6 pt-5 pb-2 bg-transparent text-base font-serif text-foreground placeholder:text-muted-foreground/30 focus:outline-none border-none shrink-0"
               />
 
               {/* Content */}
@@ -335,12 +438,13 @@ export default function CaseNotes({ caseId, adminId }: { caseId: number; adminId
                 value={editContent}
                 onChange={e => setEditContent(e.target.value)}
                 placeholder="Start writing…"
-                className="flex-1 min-h-0 px-6 pb-6 bg-transparent text-sm text-foreground/90 placeholder:text-muted-foreground/30 focus:outline-none resize-none leading-relaxed"
+                className="flex-1 px-6 pb-6 bg-transparent text-sm text-foreground/90 placeholder:text-muted-foreground/30 focus:outline-none resize-none leading-relaxed"
+                style={{ minHeight: 0 }}
                 onKeyDown={e => {
                   if ((e.metaKey || e.ctrlKey) && e.key === "s") { e.preventDefault(); saveNote(); }
                 }}
               />
-            </div>
+            </>
           )}
         </div>
       </div>
