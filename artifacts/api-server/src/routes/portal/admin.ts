@@ -100,6 +100,7 @@ router.get("/cases", async (req: Request, res: Response) => {
       caseNumber: portalCasesTable.caseNumber,
       status: portalCasesTable.status,
       assignedInvestigator: portalCasesTable.assignedInvestigator,
+      notes: portalCasesTable.notes,
       lastUpdate: portalCasesTable.lastUpdate,
       createdAt: portalCasesTable.createdAt,
       clientId: portalCasesTable.clientId,

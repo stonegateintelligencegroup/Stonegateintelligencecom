@@ -7,7 +7,7 @@ const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 interface Case {
   id: number; caseNumber: string; status: string;
   assignedInvestigator: string | null; notes: string | null; lastUpdate: string;
-  clientId: number;
+  clientId: number; clientName: string | null; clientEmail: string | null;
 }
 interface Doc { id: number; fileName: string; fileType: string; fileSize: number | null; objectPath: string; direction: string; createdAt: string; }
 interface Message { id: number; content: string; createdAt: string; senderId: number; senderName: string | null; senderRole: string | null; }
