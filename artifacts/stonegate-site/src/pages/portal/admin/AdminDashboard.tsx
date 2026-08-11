@@ -32,6 +32,8 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [confirmDeleteClientId, setConfirmDeleteClientId] = useState<number | null>(null);
   const [deletingClientId, setDeletingClientId] = useState<number | null>(null);
+  const [confirmDeleteCaseId, setConfirmDeleteCaseId] = useState<number | null>(null);
+  const [deletingCaseId, setDeletingCaseId] = useState<number | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -57,6 +59,18 @@ export default function AdminDashboard() {
     } finally {
       setDeletingClientId(null);
       setConfirmDeleteClientId(null);
+    }
+  };
+
+  const deleteCase = async (id: number) => {
+    setDeletingCaseId(id);
+    try {
+      const r = await fetch(`${BASE}/api/portal/admin/cases/${id}`, { method: "DELETE", credentials: "include" });
+      if (!r.ok) return;
+      setCases(prev => prev.filter(c => c.id !== id));
+    } finally {
+      setDeletingCaseId(null);
+      setConfirmDeleteCaseId(null);
     }
   };
 
@@ -126,29 +140,48 @@ export default function AdminDashboard() {
                 <div className="border border-white/10 rounded-lg p-8 text-center text-muted-foreground text-sm">No cases yet</div>
               ) : (
                 <div className="space-y-2">
-                  {cases.map(c => (
-                    <button
-                      key={c.id}
-                      onClick={() => setLocation(`/portal/admin/cases/${c.id}`)}
-                      className="w-full flex items-center justify-between border border-white/10 hover:border-primary/30 rounded-lg px-5 py-4 bg-white/2 transition-colors text-left group"
-                    >
-                      <div className="flex items-center gap-6 min-w-0">
-                        <div className="shrink-0">
-                          <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">{c.caseNumber}</p>
-                          <p className="text-xs text-muted-foreground">{c.clientName ?? "—"}</p>
+                  {cases.map(c => {
+                    const isConfirming = confirmDeleteCaseId === c.id;
+                    const isDeleting = deletingCaseId === c.id;
+                    return (
+                      <div key={c.id}
+                        className="flex items-center justify-between border border-white/10 hover:border-primary/30 rounded-lg px-5 py-4 bg-white/2 transition-colors group">
+                        <div className="flex items-center gap-6 min-w-0 cursor-pointer flex-1 mr-4"
+                          onClick={() => setLocation(`/portal/admin/cases/${c.id}`)}>
+                          <div className="shrink-0">
+                            <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">{c.caseNumber}</p>
+                            <p className="text-xs text-muted-foreground">{c.clientName ?? "—"}</p>
+                          </div>
+                          {c.assignedInvestigator && (
+                            <p className="text-xs text-muted-foreground hidden md:block">Inv: {c.assignedInvestigator}</p>
+                          )}
                         </div>
-                        {c.assignedInvestigator && (
-                          <p className="text-xs text-muted-foreground hidden md:block">Inv: {c.assignedInvestigator}</p>
-                        )}
+                        <div className="flex items-center gap-2 shrink-0">
+                          <p className="text-xs text-muted-foreground hidden md:block mr-2">{new Date(c.lastUpdate).toLocaleDateString()}</p>
+                          <span className={`text-xs px-2.5 py-1 rounded border tracking-[0.05em] uppercase ${STATUS_COLOR[c.status] ?? STATUS_COLOR.pending}`}>
+                            {c.status.replace("_", " ")}
+                          </span>
+                          {isConfirming ? (
+                            <>
+                              <button onClick={() => deleteCase(c.id)} disabled={isDeleting}
+                                className="text-xs bg-red-700 hover:bg-red-600 text-white px-3 py-1 rounded transition-colors disabled:opacity-50">
+                                {isDeleting ? "…" : "Confirm"}
+                              </button>
+                              <button onClick={() => setConfirmDeleteCaseId(null)}
+                                className="text-xs text-muted-foreground hover:text-foreground transition-colors px-1">
+                                Cancel
+                              </button>
+                            </>
+                          ) : (
+                            <button onClick={() => setConfirmDeleteCaseId(c.id)}
+                              className="text-muted-foreground/40 hover:text-red-400 transition-colors p-1" title="Delete case">
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-4 shrink-0">
-                        <p className="text-xs text-muted-foreground hidden md:block">{new Date(c.lastUpdate).toLocaleDateString()}</p>
-                        <span className={`text-xs px-2.5 py-1 rounded border tracking-[0.05em] uppercase ${STATUS_COLOR[c.status] ?? STATUS_COLOR.pending}`}>
-                          {c.status.replace("_", " ")}
-                        </span>
-                      </div>
-                    </button>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>

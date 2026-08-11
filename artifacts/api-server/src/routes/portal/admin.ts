@@ -8,6 +8,7 @@ import {
   portalMessagesTable,
   portalNoteFoldersTable,
   portalCaseNotesTable,
+  intakeSubmissionsTable,
 } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import { requireAdmin } from "../../middlewares/auth";
@@ -118,6 +119,12 @@ router.post("/clients", async (req: Request, res: Response) => {
 router.delete("/clients/:id", async (req: Request, res: Response) => {
   const clientId = Number(req.params.id);
 
+  // Null out intake submission links (FK = NO ACTION, so must clear before deleting user)
+  await db
+    .update(intakeSubmissionsTable)
+    .set({ portalUserId: null })
+    .where(eq(intakeSubmissionsTable.portalUserId, clientId));
+
   // Delete in dependency order: notes → folders → documents → messages → cases → user
   const clientCases = await db
     .select({ id: portalCasesTable.id })
@@ -132,11 +139,33 @@ router.delete("/clients/:id", async (req: Request, res: Response) => {
   }
 
   await db.delete(portalCasesTable).where(eq(portalCasesTable.clientId, clientId));
-  const [deleted] = await db.delete(portalUsersTable).where(eq(portalUsersTable.id, clientId)).returning({ id: portalUsersTable.id });
+  const [deleted] = await db
+    .delete(portalUsersTable)
+    .where(eq(portalUsersTable.id, clientId))
+    .returning({ id: portalUsersTable.id });
 
   if (!deleted) { res.status(404).json({ error: "Client not found." }); return; }
   req.log.info({ clientId }, "Client deleted by admin");
   res.json({ deleted: true, id: clientId });
+});
+
+// DELETE /api/portal/admin/cases/:id — remove a case and all related data
+router.delete("/cases/:id", async (req: Request, res: Response) => {
+  const caseId = Number(req.params.id);
+
+  await db.delete(portalCaseNotesTable).where(eq(portalCaseNotesTable.caseId, caseId));
+  await db.delete(portalNoteFoldersTable).where(eq(portalNoteFoldersTable.caseId, caseId));
+  await db.delete(portalDocumentsTable).where(eq(portalDocumentsTable.caseId, caseId));
+  await db.delete(portalMessagesTable).where(eq(portalMessagesTable.caseId, caseId));
+
+  const [deleted] = await db
+    .delete(portalCasesTable)
+    .where(eq(portalCasesTable.id, caseId))
+    .returning({ id: portalCasesTable.id });
+
+  if (!deleted) { res.status(404).json({ error: "Case not found." }); return; }
+  req.log.info({ caseId }, "Case deleted by admin");
+  res.json({ deleted: true, id: caseId });
 });
 
 // ── Cases ────────────────────────────────────────────────────────────────────
