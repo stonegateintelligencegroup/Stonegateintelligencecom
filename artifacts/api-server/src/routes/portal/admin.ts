@@ -114,6 +114,31 @@ router.post("/clients", async (req: Request, res: Response) => {
   res.status(201).json({ id: newUser.id, name: newUser.name, email: newUser.email });
 });
 
+// DELETE /api/portal/admin/clients/:id — remove client and all related data
+router.delete("/clients/:id", async (req: Request, res: Response) => {
+  const clientId = Number(req.params.id);
+
+  // Delete in dependency order: notes → folders → documents → messages → cases → user
+  const clientCases = await db
+    .select({ id: portalCasesTable.id })
+    .from(portalCasesTable)
+    .where(eq(portalCasesTable.clientId, clientId));
+
+  for (const c of clientCases) {
+    await db.delete(portalCaseNotesTable).where(eq(portalCaseNotesTable.caseId, c.id));
+    await db.delete(portalNoteFoldersTable).where(eq(portalNoteFoldersTable.caseId, c.id));
+    await db.delete(portalDocumentsTable).where(eq(portalDocumentsTable.caseId, c.id));
+    await db.delete(portalMessagesTable).where(eq(portalMessagesTable.caseId, c.id));
+  }
+
+  await db.delete(portalCasesTable).where(eq(portalCasesTable.clientId, clientId));
+  const [deleted] = await db.delete(portalUsersTable).where(eq(portalUsersTable.id, clientId)).returning({ id: portalUsersTable.id });
+
+  if (!deleted) { res.status(404).json({ error: "Client not found." }); return; }
+  req.log.info({ clientId }, "Client deleted by admin");
+  res.json({ deleted: true, id: clientId });
+});
+
 // ── Cases ────────────────────────────────────────────────────────────────────
 
 // GET /api/portal/admin/cases

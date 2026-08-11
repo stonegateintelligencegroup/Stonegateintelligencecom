@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
-import { Users, Briefcase, LogOut, Plus, ClipboardList } from "lucide-react";
+import { Users, Briefcase, LogOut, Plus, ClipboardList, Trash2 } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -30,6 +30,8 @@ export default function AdminDashboard() {
   const [cases, setCases] = useState<Case[]>([]);
   const [inquiries, setInquiries] = useState<InquirySummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [confirmDeleteClientId, setConfirmDeleteClientId] = useState<number | null>(null);
+  const [deletingClientId, setDeletingClientId] = useState<number | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -44,6 +46,19 @@ export default function AdminDashboard() {
   }, []);
 
   const handleLogout = async () => { await logout(); setLocation("/portal/login"); };
+
+  const deleteClient = async (id: number) => {
+    setDeletingClientId(id);
+    try {
+      const r = await fetch(`${BASE}/api/portal/admin/clients/${id}`, { method: "DELETE", credentials: "include" });
+      if (!r.ok) return;
+      setClients(prev => prev.filter(c => c.id !== id));
+      setCases(prev => prev.filter(c => c.clientId !== id));
+    } finally {
+      setDeletingClientId(null);
+      setConfirmDeleteClientId(null);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-black">
@@ -186,22 +201,48 @@ export default function AdminDashboard() {
                 <div className="space-y-2">
                   {clients.map(c => {
                     const clientCase = cases.find(ca => ca.clientId === c.id);
+                    const isConfirming = confirmDeleteClientId === c.id;
+                    const isDeleting = deletingClientId === c.id;
                     return (
                       <div
                         key={c.id}
-                        onClick={() => clientCase ? setLocation(`/portal/admin/cases/${clientCase.id}`) : setLocation(`/portal/admin/cases/new`)}
-                        className="flex items-center justify-between border border-white/10 rounded-lg px-5 py-4 bg-white/2 cursor-pointer hover:border-primary/40 hover:bg-white/4 transition-colors"
+                        className="flex items-center justify-between border border-white/10 rounded-lg px-5 py-4 bg-white/2 hover:border-primary/40 hover:bg-white/4 transition-colors"
                       >
-                        <div>
+                        <div className="min-w-0 cursor-pointer flex-1 mr-4"
+                          onClick={() => clientCase ? setLocation(`/portal/admin/cases/${clientCase.id}`) : setLocation(`/portal/admin/cases/new`)}>
                           <p className="text-sm text-foreground">{c.name}</p>
                           <p className="text-xs text-muted-foreground">{c.email}</p>
                           {clientCase && <p className="text-xs text-primary/70 mt-0.5">{clientCase.caseNumber}</p>}
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 shrink-0">
                           <span className={`text-xs px-2.5 py-1 rounded border ${c.isActive ? "text-green-400 border-green-400/30 bg-green-400/10" : "text-yellow-400 border-yellow-400/30 bg-yellow-400/10"}`}>
                             {c.isActive ? "Active" : "Invite Pending"}
                           </span>
-                          <span className="text-muted-foreground/40 text-xs">→</span>
+                          {isConfirming ? (
+                            <>
+                              <button
+                                onClick={() => deleteClient(c.id)}
+                                disabled={isDeleting}
+                                className="text-xs bg-red-700 hover:bg-red-600 text-white px-3 py-1 rounded transition-colors disabled:opacity-50"
+                              >
+                                {isDeleting ? "…" : "Confirm"}
+                              </button>
+                              <button
+                                onClick={() => setConfirmDeleteClientId(null)}
+                                className="text-xs text-muted-foreground hover:text-foreground transition-colors px-1"
+                              >
+                                Cancel
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              onClick={() => setConfirmDeleteClientId(c.id)}
+                              className="text-muted-foreground/40 hover:text-red-400 transition-colors p-1"
+                              title="Delete client"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </div>
                       </div>
                     );
