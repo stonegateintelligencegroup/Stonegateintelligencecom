@@ -27,6 +27,8 @@ import AdminDashboard from '@/pages/portal/admin/AdminDashboard';
 import AdminClientNew from '@/pages/portal/admin/AdminClientNew';
 import AdminNewCase from '@/pages/portal/admin/AdminNewCase';
 import AdminCaseDetail from '@/pages/portal/admin/AdminCaseDetail';
+import AdminInquiries from '@/pages/portal/admin/AdminInquiries';
+import Intake from '@/pages/Intake';
 
 const queryClient = new QueryClient();
 
@@ -65,6 +67,7 @@ function Router() {
         <Route path="/" component={Home} />
         <Route path="/about" component={About} />
         <Route path="/services" component={Services} />
+        <Route path="/intake" component={Intake} />
         <Route path="/contact" component={Contact} />
         <Route path="/privacy" component={Privacy} />
 
@@ -100,6 +103,9 @@ function Router() {
         </Route>
         <Route path="/portal/admin/cases/:id">
           <PortalGuard adminOnly><AdminCaseDetail /></PortalGuard>
+        </Route>
+        <Route path="/portal/admin/inquiries">
+          <PortalGuard adminOnly><AdminInquiries /></PortalGuard>
         </Route>
 
         <Route component={NotFound} />

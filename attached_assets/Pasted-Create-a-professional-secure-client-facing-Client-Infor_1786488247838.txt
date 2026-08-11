@@ -1,0 +1,380 @@
+Create a professional, secure, client-facing Client Information / Intake Form for Stonegate Intelligence Group, LLC.
+
+The form should be integrated into my existing Stonegate Intelligence Group website and match the website’s existing branding, typography, colors, logo, and overall professional aesthetic. Do not redesign the rest of the website.
+
+PURPOSE
+
+This is a prospective-client intake form for an intelligence and investigative services company. The form should allow potential clients to provide enough information for Stonegate Intelligence Group to evaluate their inquiry and determine appropriate next steps.
+
+The form should feel professional, discreet, trustworthy, modern, and appropriate for attorneys, law firms, businesses, corporations, and individual clients.
+
+Do NOT make it look like a generic Google Form.
+
+PAGE HEADER
+
+Display:
+
+STONEGATE
+INTELLIGENCE GROUP
+
+EVERY QUESTION DESERVES AN ANSWER GROUNDED IN EVIDENCE
+
+Then display:
+
+CLIENT INFORMATION SHEET
+
+“Please complete all sections that apply to your inquiry.”
+
+Include a short privacy/security notice beneath the introduction:
+
+“Please do not submit passwords, Social Security numbers, financial account numbers, medical records, or other highly sensitive personal information through this form. A Stonegate representative will contact you regarding secure methods for providing sensitive documentation when appropriate.”
+
+SECTION 1 — CLIENT INFORMATION
+
+Create the following fields:
+
+1. Full Name / Company Name
+    * Required
+    * Text field
+2. Date
+    * Required
+    * Date picker
+    * Default to today’s date
+3. Referred By
+    * Optional
+    * Text field
+4. Mailing Address
+    * Optional
+    * Address field
+5. Phone
+    * Required
+    * Phone number validation
+6. Email
+    * Required
+    * Email validation
+7. Preferred Contact Method
+    * Dropdown or radio buttons
+    * Phone
+    * Email
+    * Text Message
+    * Other
+8. Best Time to Reach You
+    * Optional
+    * Text field or dropdown
+9. Client Type
+    * Required
+    * Use radio buttons so only one can be selected:
+        * Individual
+        * Attorney / Law Firm
+        * Business / Corporation
+
+SECTION 2 — SERVICES NEEDED
+
+Display:
+
+“Please select all that apply.”
+
+Use checkboxes. Allow multiple selections.
+
+Options:
+
+* Investigative services
+* Intelligence consulting
+* Due diligence research
+* Risk assessment
+* Background research
+* Litigation support services
+* Business intelligence services
+* Other consulting
+
+If “Other consulting” is selected, dynamically display a text field:
+
+“Please describe the service you are seeking.”
+
+SECTION 3 — CASE / ENGAGEMENT DETAILS
+
+Create a large textarea labeled:
+
+“Please briefly describe the nature of your inquiry, including relevant names, dates, locations, and desired outcome:”
+
+This field should be large enough for a detailed response.
+
+Include helper text:
+
+“Please provide only information necessary for Stonegate to understand your inquiry. Additional documentation can be provided through a secure method if requested.”
+
+SECTION 4 — TIMELINE & URGENCY
+
+Use radio buttons. Allow only one selection:
+
+* Urgent — within 48 hours
+* Standard — within 1–2 weeks
+* Flexible / no set deadline
+
+Then create:
+
+Target Completion Date (if applicable)
+
+* Optional
+* Date picker
+
+If “Urgent” is selected, display a subtle notice:
+
+“Urgent requests may be subject to expedited-service availability and additional fees.”
+
+Do not automatically promise that an urgent request can be completed within 48 hours.
+
+SECTION 5 — BUDGET / ENGAGEMENT PREFERENCE
+
+Display:
+
+“Preferred Engagement Structure”
+
+Use radio buttons:
+
+* Hourly rate
+* Flat fee — defined scope
+* Monthly retainer
+* Not sure — would like a recommendation
+
+Then:
+
+Estimated Budget Range (optional)
+
+Use either a text field or dropdown with:
+
+* Under $500
+* $500–$1,000
+* $1,000–$2,500
+* $2,500–$5,000
+* $5,000+
+* Not sure
+
+Also provide an optional text field:
+
+“Additional budget or engagement information”
+
+SECTION 6 — ACKNOWLEDGEMENT
+
+Display the following acknowledgement:
+
+“I certify that the information provided above is accurate to the best of my knowledge, and that any services requested from Stonegate Intelligence Group will be used for lawful purposes only.”
+
+Create a required checkbox:
+
+“I agree to the acknowledgement above.”
+
+The user must check this box before the form can be submitted.
+
+Do NOT create a fake handwritten signature field. Instead, create:
+
+Electronic Signature
+
+* Required
+* Text field
+* Helper text: “Type your full legal name to serve as your electronic signature.”
+
+Then:
+
+Signature Date
+
+* Required
+* Date picker
+* Default to today’s date
+
+FORM VALIDATION
+
+Implement client-side and server-side validation.
+
+Required fields:
+
+* Full Name / Company Name
+* Date
+* Phone
+* Email
+* Client Type
+* At least one Service Needed
+* Case / Engagement Details
+* Timeline & Urgency
+* Engagement Preference
+* Acknowledgement checkbox
+* Electronic Signature
+* Signature Date
+
+Display clear, professional validation messages directly beneath fields.
+
+Do not erase the user’s completed information if validation fails.
+
+SECURITY / SPAM PROTECTION
+
+Implement reasonable protections against spam and automated submissions.
+
+Include:
+
+* Server-side validation
+* Rate limiting where appropriate
+* Honeypot field or equivalent spam protection
+* Input sanitization
+* Protection against malicious form submissions
+
+Do not expose API keys, email credentials, database credentials, or other secrets in frontend code.
+
+Do not store highly sensitive information unnecessarily.
+
+SUBMISSION EXPERIENCE
+
+The submit button should say:
+
+“SUBMIT INQUIRY”
+
+When the user submits:
+
+1. Validate all required fields.
+2. Display a professional loading state.
+3. Prevent duplicate submissions.
+4. Successfully submit the inquiry.
+5. Display a confirmation page/message.
+
+Confirmation message:
+
+“Thank you for contacting Stonegate Intelligence Group. Your inquiry has been received. A representative will review the information provided and contact you regarding next steps.”
+
+Also state:
+
+“Submission of this form does not create an attorney-client relationship, investigator-client relationship, or guarantee that Stonegate Intelligence Group will accept an engagement.”
+
+Provide a button:
+
+“Return to Stonegate Intelligence Group”
+
+ADMIN / BACKEND
+
+Do not simply send the form information to an email address from frontend JavaScript.
+
+Create a proper backend submission process using the existing application’s architecture.
+
+If the website already has a database, use the existing database.
+
+If there is no database, create an appropriate secure data-storage solution for submitted inquiries.
+
+Store:
+
+* Submission ID
+* Submission date/time
+* Client information
+* Client type
+* Services requested
+* Engagement details
+* Timeline
+* Budget preference
+* Acknowledgement
+* Electronic signature
+* Signature date
+* Submission status
+* Internal notes field
+* Created/updated timestamps
+
+The internal status should initially be:
+
+“New Inquiry”
+
+Allow the administrator to later change the status to:
+
+* New Inquiry
+* Contacted
+* Consultation Scheduled
+* Proposal Sent
+* Accepted
+* Declined
+* Closed
+
+Do not expose internal notes or administrative information to the client.
+
+ADMIN NOTIFICATION
+
+If the existing application already has an email notification system configured, send an internal notification when a new inquiry is submitted.
+
+The notification should contain the submission ID and basic client information, but avoid unnecessarily including sensitive case details in the email itself.
+
+The email should direct the administrator to the secure admin interface to review the complete submission.
+
+Do not hard-code credentials or API keys.
+
+USER EXPERIENCE
+
+Make the form:
+
+* Fully responsive
+* Mobile friendly
+* Accessible
+* Keyboard navigable
+* Compatible with desktop, tablet, and mobile
+* Easy to read
+* Professionally spaced
+* Clearly divided into sections
+
+Use a multi-step form if that fits the existing website design, but preserve the section structure above.
+
+If using a multi-step form, include:
+
+Step 1 — Client Information
+Step 2 — Services
+Step 3 — Engagement Details
+Step 4 — Timeline & Budget
+Step 5 — Acknowledgement
+Step 6 — Review & Submit
+
+Include:
+
+* Progress indicator
+* Back button
+* Continue button
+* Save entered information while moving between steps
+* Final review screen before submission
+
+REVIEW SCREEN
+
+Before submission, display a read-only summary of everything the client entered.
+
+Include:
+
+“Review Your Information”
+
+Allow the client to click “Edit” next to each section before submitting.
+
+Final buttons:
+
+“Back to Edit”
+“Submit Inquiry”
+
+IMPORTANT
+
+Before making changes, inspect the existing Stonegate Intelligence Group website code and determine:
+
+1. What framework is being used
+2. What styling system is being used
+3. What database, if any, is already configured
+4. What backend/API architecture is already being used
+5. Whether email functionality already exists
+
+Use the existing architecture rather than introducing unnecessary frameworks or duplicate systems.
+
+Do not break existing pages, navigation, styling, authentication, or functionality.
+
+After implementation, test:
+
+* Required-field validation
+* Email validation
+* Phone validation
+* Checkbox validation
+* Multiple service selection
+* “Other consulting” conditional field
+* Multi-step navigation
+* Review screen
+* Successful submission
+* Duplicate submission prevention
+* Mobile responsiveness
+* Backend/database submission
+* Admin notification if configured
+
+Then give me a concise summary of what files were changed, what was added, and anything I still need to configure such as environment variables, email credentials, or database settings.
