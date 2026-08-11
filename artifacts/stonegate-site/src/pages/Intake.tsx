@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { ChevronRight, Check, AlertCircle, ArrowLeft, ArrowRight, Pencil } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -103,6 +103,8 @@ const inputErrCls = "w-full bg-black border border-red-500/40 rounded px-4 py-3 
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function Intake() {
+  const isOnboarding = typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("onboarding") === "1";
   const [step, setStep] = useState(1);
   const [data, setData] = useState<FormData>(EMPTY);
   const [errors, setErrors] = useState<Partial<Record<string, string>>>({});
@@ -208,9 +210,11 @@ export default function Intake() {
             <Check className="w-8 h-8 text-primary" />
           </div>
           <div>
-            <h1 className="font-serif text-3xl text-foreground mb-4">Inquiry Received</h1>
+            <h1 className="font-serif text-3xl text-foreground mb-4">
+              {isOnboarding ? "Information Received" : "Inquiry Received"}
+            </h1>
             <p className="text-muted-foreground leading-relaxed mb-6">
-              Thank you for contacting Stonegate Intelligence Group. Your inquiry has been received.
+              Thank you for contacting Stonegate Intelligence Group. Your information has been received.
               A representative will review the information provided and contact you regarding next steps.
             </p>
             <p className="text-sm text-muted-foreground/60 border border-white/8 rounded-lg p-4 leading-relaxed">
@@ -218,9 +222,15 @@ export default function Intake() {
               relationship, or guarantee that Stonegate Intelligence Group will accept an engagement.
             </p>
           </div>
-          <Link href="/" className="inline-flex items-center gap-2 bg-primary/10 hover:bg-primary/20 border border-primary/30 text-primary text-xs tracking-[0.15em] uppercase px-6 py-3 rounded transition-colors">
-            Return to Stonegate Intelligence Group <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
+          {isOnboarding ? (
+            <Link href="/portal/login" className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-white text-xs tracking-[0.15em] uppercase px-8 py-3 rounded transition-colors">
+              Sign In to Your Portal <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          ) : (
+            <Link href="/" className="inline-flex items-center gap-2 bg-primary/10 hover:bg-primary/20 border border-primary/30 text-primary text-xs tracking-[0.15em] uppercase px-6 py-3 rounded transition-colors">
+              Return to Stonegate Intelligence Group <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          )}
         </div>
       </div>
     );
@@ -239,7 +249,13 @@ export default function Intake() {
           <p className="text-xs tracking-[0.3em] uppercase text-primary mb-3">Stonegate Intelligence Group</p>
           <p className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground/50 mb-8">Every Question Deserves an Answer Grounded in Evidence</p>
           <h1 className="font-serif text-4xl md:text-5xl text-foreground mb-3">Client Information Sheet</h1>
-          <p className="text-muted-foreground text-sm">Please complete all sections that apply to your inquiry.</p>
+          {isOnboarding ? (
+            <p className="text-muted-foreground text-sm">
+              Welcome. Before accessing your portal, please complete this form so our team can prepare for your engagement.
+            </p>
+          ) : (
+            <p className="text-muted-foreground text-sm">Please complete all sections that apply to your inquiry.</p>
+          )}
           <div className="mt-6 border border-amber-900/30 bg-amber-900/10 rounded-lg px-5 py-4 text-left">
             <p className="text-xs text-amber-400/80 leading-relaxed">
               <strong className="text-amber-400">Privacy Notice:</strong> Please do not submit passwords, Social Security numbers,

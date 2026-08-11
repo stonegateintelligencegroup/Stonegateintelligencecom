@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { ArrowLeft, ArrowRight, AlertCircle } from "lucide-react";
+import { ArrowLeft, ArrowRight, AlertCircle, ExternalLink } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -8,6 +8,7 @@ interface InquirySummary {
   id: number; fullName: string; email: string; phone: string;
   clientType: string; services: string; timeline: string;
   status: string; submissionDate: string; createdAt: string;
+  portalUserId: number | null; portalClientName: string | null;
 }
 interface InquiryDetail extends InquirySummary {
   referredBy: string | null; mailingAddress: string | null;
@@ -17,6 +18,7 @@ interface InquiryDetail extends InquirySummary {
   budgetRange: string | null; budgetNotes: string | null;
   acknowledged: boolean; electronicSignature: string;
   signatureDate: string; internalNotes: string | null; updatedAt: string;
+  portalClientEmail: string | null;
 }
 
 const STATUSES = ["new_inquiry","contacted","consultation_scheduled","proposal_sent","accepted","declined","closed"];
@@ -66,11 +68,19 @@ export default function AdminInquiries() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
+  // Support ?userId= filter (e.g. when navigating from a client view)
+  const userId = typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search).get("userId")
+    : null;
+
   useEffect(() => {
-    fetch(`${BASE}/api/portal/admin/inquiries`, { credentials: "include" })
+    const url = userId
+      ? `${BASE}/api/portal/admin/inquiries?userId=${userId}`
+      : `${BASE}/api/portal/admin/inquiries`;
+    fetch(url, { credentials: "include" })
       .then(r => r.json()).then(d => { setInquiries(Array.isArray(d) ? d : []); setLoading(false); })
       .catch(() => { setError("Failed to load inquiries."); setLoading(false); });
-  }, []);
+  }, [userId]);
 
   const openDetail = async (id: number) => {
     try {
@@ -94,7 +104,7 @@ export default function AdminInquiries() {
       });
       if (!r.ok) { setError("Save failed."); return; }
       const updated: InquiryDetail = await r.json();
-      setSelected(updated);
+      setSelected(prev => prev ? { ...prev, status: updated.status, internalNotes: updated.internalNotes } : prev);
       setInquiries(prev => prev.map(i => i.id === updated.id ? { ...i, status: updated.status } : i));
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
@@ -116,6 +126,14 @@ export default function AdminInquiries() {
               <p className="text-xs tracking-[0.2em] uppercase text-muted-foreground mb-1">Submission #{selected.id}</p>
               <h1 className="font-serif text-3xl text-foreground">{selected.fullName}</h1>
               <p className="text-muted-foreground text-sm mt-1">{CLIENT_TYPE[selected.clientType] ?? selected.clientType}</p>
+              {selected.portalClientName && (
+                <div className="mt-2 flex items-center gap-2 text-xs text-primary/80">
+                  <ExternalLink className="w-3 h-3" />
+                  <span>Portal client: <strong className="text-primary">{selected.portalClientName}</strong>
+                    {selected.portalClientEmail && <span className="text-muted-foreground ml-1">({selected.portalClientEmail})</span>}
+                  </span>
+                </div>
+              )}
             </div>
             <span className={`text-xs tracking-wider uppercase px-3 py-1.5 rounded border ${STATUS_COLORS[selected.status]}`}>
               {STATUS_LABELS[selected.status] ?? selected.status}
@@ -232,8 +250,12 @@ export default function AdminInquiries() {
 
         <div className="mb-10">
           <p className="text-xs tracking-[0.2em] uppercase text-muted-foreground mb-2">Admin</p>
-          <h1 className="font-serif text-4xl text-foreground">Client Inquiries</h1>
-          <p className="text-muted-foreground text-sm mt-2">Intake form submissions from prospective clients.</p>
+          <h1 className="font-serif text-4xl text-foreground">
+            {userId ? "Client Intake Submission" : "Client Inquiries"}
+          </h1>
+          <p className="text-muted-foreground text-sm mt-2">
+            {userId ? "Intake form submitted by this portal client." : "Intake form submissions from prospective and existing clients."}
+          </p>
         </div>
 
         {error && (
@@ -246,7 +268,9 @@ export default function AdminInquiries() {
           <p className="text-muted-foreground text-sm">Loading inquiries…</p>
         ) : inquiries.length === 0 ? (
           <div className="border border-white/10 rounded-lg p-12 text-center text-muted-foreground">
-            No inquiries yet. Submissions will appear here once clients complete the intake form.
+            {userId
+              ? "This client has not submitted an intake form yet."
+              : "No inquiries yet. Submissions will appear here once clients complete the intake form."}
           </div>
         ) : (
           <div className="space-y-2">
@@ -255,8 +279,13 @@ export default function AdminInquiries() {
                 className="w-full text-left border border-white/10 rounded-lg px-6 py-5 bg-white/2 hover:bg-white/4 hover:border-primary/30 transition-all group">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-wrap">
                       <span className="font-medium text-foreground">{inq.fullName}</span>
+                      {inq.portalClientName && (
+                        <span className="text-[10px] tracking-wider text-primary/70 flex items-center gap-1">
+                          <ExternalLink className="w-2.5 h-2.5" /> Portal Client
+                        </span>
+                      )}
                       <span className={`text-[10px] tracking-wider uppercase px-2 py-0.5 rounded border ${STATUS_COLORS[inq.status]}`}>
                         {STATUS_LABELS[inq.status] ?? inq.status}
                       </span>

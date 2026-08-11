@@ -70,6 +70,8 @@ router.post("/clients", async (req: Request, res: Response) => {
     : "https://stonegateintelligence.com";
   const inviteUrl = `${domain}/portal/invite/${inviteToken}`;
 
+  const intakeUrl = `${domain}/intake?onboarding=1`;
+
   await resend.emails.send({
     from: "Stonegate Intelligence Group <noreply@stonegateintelligence.com>",
     to: email,
@@ -79,14 +81,34 @@ router.post("/clients", async (req: Request, res: Response) => {
         <h1 style="color: #c0392b; font-size: 24px; margin-bottom: 8px;">Stonegate Intelligence Group</h1>
         <p style="color: #888; font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 32px;">Secure Client Portal</p>
         <p style="margin-bottom: 16px;">Dear ${name},</p>
-        <p style="margin-bottom: 16px;">You have been granted access to the Stonegate Intelligence Group secure client portal. Please click the link below to set your password and access your account.</p>
-        <p style="margin-bottom: 32px;"><strong>This invitation expires in 72 hours.</strong></p>
-        <a href="${inviteUrl}" style="display: inline-block; background: #c0392b; color: #ffffff; padding: 14px 28px; text-decoration: none; font-family: sans-serif; font-size: 14px; letter-spacing: 0.1em; text-transform: uppercase;">Access Your Portal</a>
+        <p style="margin-bottom: 16px;">You have been granted access to the Stonegate Intelligence Group secure client portal. Your onboarding has two steps:</p>
+        <table style="width:100%;border-collapse:collapse;margin-bottom:32px;">
+          <tr>
+            <td style="padding:16px;border:1px solid #333;vertical-align:top;width:36px;">
+              <span style="display:inline-block;width:28px;height:28px;border-radius:50%;background:#c0392b;color:#fff;font-family:Arial,sans-serif;font-size:14px;font-weight:bold;text-align:center;line-height:28px;">1</span>
+            </td>
+            <td style="padding:16px;border:1px solid #333;border-left:none;vertical-align:top;">
+              <p style="margin:0 0 8px;font-weight:bold;color:#e5e5e5;">Set your password</p>
+              <p style="margin:0 0 12px;font-size:13px;color:#999;">Click the link below to activate your account. <strong style="color:#e5e5e5;">This invitation expires in 72 hours.</strong></p>
+              <a href="${inviteUrl}" style="display:inline-block;background:#c0392b;color:#ffffff;padding:10px 20px;text-decoration:none;font-family:Arial,sans-serif;font-size:13px;letter-spacing:0.1em;text-transform:uppercase;">Access Your Portal</a>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px;border:1px solid #333;border-top:none;vertical-align:top;width:36px;">
+              <span style="display:inline-block;width:28px;height:28px;border-radius:50%;background:#333;color:#999;font-family:Arial,sans-serif;font-size:14px;font-weight:bold;text-align:center;line-height:28px;">2</span>
+            </td>
+            <td style="padding:16px;border:1px solid #333;border-left:none;border-top:none;vertical-align:top;">
+              <p style="margin:0 0 8px;font-weight:bold;color:#e5e5e5;">Complete your Client Information Sheet</p>
+              <p style="margin:0 0 12px;font-size:13px;color:#999;">After setting your password, you will be prompted to complete a brief intake form. This helps our team understand your inquiry before your first contact.</p>
+              <a href="${intakeUrl}" style="display:inline-block;border:1px solid #555;color:#ccc;padding:10px 20px;text-decoration:none;font-family:Arial,sans-serif;font-size:13px;letter-spacing:0.1em;text-transform:uppercase;">Client Information Sheet</a>
+            </td>
+          </tr>
+        </table>
         <p style="margin-top: 32px; color: #666; font-size: 12px;">If you did not expect this invitation, please disregard this email.</p>
         <p style="color: #666; font-size: 12px;">Stonegate Intelligence Group LLC</p>
       </div>
     `,
-    text: `You have been invited to the Stonegate Intelligence Group client portal. Set your password here: ${inviteUrl}\n\nThis link expires in 72 hours.`,
+    text: `You have been invited to the Stonegate Intelligence Group client portal.\n\nStep 1 — Set your password:\n${inviteUrl}\n\nThis link expires in 72 hours.\n\nStep 2 — Complete your Client Information Sheet:\nAfter activating your account, please complete the intake form at:\n${intakeUrl}\n\nStonegate Intelligence Group LLC`,
   });
 
   res.status(201).json({ id: newUser.id, name: newUser.name, email: newUser.email });

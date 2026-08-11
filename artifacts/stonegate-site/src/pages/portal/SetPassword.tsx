@@ -40,17 +40,27 @@ export default function SetPassword() {
   if (done) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center px-4">
-        <div className="text-center max-w-md">
+        <div className="text-center max-w-lg">
           <div className="w-12 h-12 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center mx-auto mb-6">
             <Shield className="w-6 h-6 text-primary" />
           </div>
-          <h2 className="font-serif text-2xl text-foreground mb-3">Password Set</h2>
-          <p className="text-muted-foreground text-sm mb-6">Your account is now active. You can sign in to access your portal.</p>
+          <h2 className="font-serif text-2xl text-foreground mb-3">Account Activated</h2>
+          <p className="text-muted-foreground text-sm mb-8">
+            Your Stonegate Intelligence Group portal account is now active.
+            <br />
+            Before signing in, please complete the Client Information Sheet so our team can prepare for your engagement.
+          </p>
+          <button
+            onClick={() => setLocation("/intake?onboarding=1")}
+            className="w-full bg-primary hover:bg-primary/90 text-white font-sans text-xs tracking-[0.2em] uppercase py-3 px-8 rounded transition-colors mb-3"
+          >
+            Complete Client Information Sheet
+          </button>
           <button
             onClick={() => setLocation("/portal/login")}
-            className="bg-primary hover:bg-primary/90 text-white font-sans text-xs tracking-[0.2em] uppercase py-3 px-8 rounded transition-colors"
+            className="w-full text-muted-foreground hover:text-foreground text-xs tracking-[0.15em] uppercase py-2 transition-colors"
           >
-            Sign In
+            Skip for now — Sign In
           </button>
         </div>
       </div>

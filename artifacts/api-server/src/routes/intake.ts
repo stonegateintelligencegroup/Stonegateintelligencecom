@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import { Resend } from "resend";
-import { db, intakeSubmissionsTable } from "@workspace/db";
+import { db, intakeSubmissionsTable, portalUsersTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import { requireAdmin } from "../middlewares/auth";
 
@@ -44,6 +44,7 @@ function buildNotificationEmail(sub: {
   services: string;
   timeline: string;
   submittedAt: string;
+  portalClientName?: string | null;
 }): { html: string; text: string } {
   const serviceList = (() => {
     try {
@@ -68,6 +69,10 @@ function buildNotificationEmail(sub: {
     ? `https://${process.env.REPLIT_DEV_DOMAIN}/portal/admin/inquiries`
     : "https://stonegateintelligence.com/portal/admin/inquiries";
 
+  const portalRow = sub.portalClientName
+    ? `<tr><td style="padding:10px 16px;font-weight:600;color:#1a1a1a;width:180px;border-bottom:1px solid #f0f0f0;font-family:Arial,sans-serif;font-size:13px;">Portal Client</td><td style="padding:10px 16px;color:#333;border-bottom:1px solid #f0f0f0;font-family:Arial,sans-serif;font-size:13px;">${sub.portalClientName} ✓</td></tr>`
+    : "";
+
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -88,6 +93,7 @@ function buildNotificationEmail(sub: {
             </p>
             <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e0e0e0;border-collapse:collapse;">
               <tr><td style="padding:10px 16px;font-weight:600;color:#1a1a1a;width:180px;border-bottom:1px solid #f0f0f0;font-family:Arial,sans-serif;font-size:13px;">Submission ID</td><td style="padding:10px 16px;color:#333;border-bottom:1px solid #f0f0f0;font-family:Arial,sans-serif;font-size:13px;">#${sub.id}</td></tr>
+              ${portalRow}
               <tr><td style="padding:10px 16px;font-weight:600;color:#1a1a1a;border-bottom:1px solid #f0f0f0;font-family:Arial,sans-serif;font-size:13px;">Name</td><td style="padding:10px 16px;color:#333;border-bottom:1px solid #f0f0f0;font-family:Arial,sans-serif;font-size:13px;">${sub.fullName}</td></tr>
               <tr><td style="padding:10px 16px;font-weight:600;color:#1a1a1a;border-bottom:1px solid #f0f0f0;font-family:Arial,sans-serif;font-size:13px;">Client Type</td><td style="padding:10px 16px;color:#333;border-bottom:1px solid #f0f0f0;font-family:Arial,sans-serif;font-size:13px;">${clientTypeLabel[sub.clientType] ?? sub.clientType}</td></tr>
               <tr><td style="padding:10px 16px;font-weight:600;color:#1a1a1a;border-bottom:1px solid #f0f0f0;font-family:Arial,sans-serif;font-size:13px;">Email</td><td style="padding:10px 16px;color:#333;border-bottom:1px solid #f0f0f0;font-family:Arial,sans-serif;font-size:13px;">${sub.email}</td></tr>
@@ -125,7 +131,7 @@ function buildNotificationEmail(sub: {
 ${"=".repeat(50)}
 
 Submission ID:     #${sub.id}
-Name:              ${sub.fullName}
+${sub.portalClientName ? `Portal Client:     ${sub.portalClientName} ✓\n` : ""}Name:              ${sub.fullName}
 Client Type:       ${clientTypeLabel[sub.clientType] ?? sub.clientType}
 Email:             ${sub.email}
 Phone:             ${sub.phone}
@@ -193,6 +199,8 @@ router.post("/intake", async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
+  const normalizedEmail = email.trim().toLowerCase();
+
   // Save to DB
   const [submission] = await db
     .insert(intakeSubmissionsTable)
@@ -202,7 +210,7 @@ router.post("/intake", async (req: Request, res: Response): Promise<void> => {
       referredBy: referredBy?.trim() || null,
       mailingAddress: mailingAddress?.trim() || null,
       phone: phone.trim(),
-      email: email.trim().toLowerCase(),
+      email: normalizedEmail,
       preferredContact,
       bestTime: bestTime?.trim() || null,
       clientType,
@@ -224,6 +232,27 @@ router.post("/intake", async (req: Request, res: Response): Promise<void> => {
 
   req.log.info({ submissionId: submission.id }, "New intake submission saved");
 
+  // Auto-link to portal user by email
+  let portalClientName: string | null = null;
+  try {
+    const [portalUser] = await db
+      .select({ id: portalUsersTable.id, name: portalUsersTable.name })
+      .from(portalUsersTable)
+      .where(eq(portalUsersTable.email, normalizedEmail))
+      .limit(1);
+
+    if (portalUser) {
+      await db
+        .update(intakeSubmissionsTable)
+        .set({ portalUserId: portalUser.id })
+        .where(eq(intakeSubmissionsTable.id, submission.id));
+      portalClientName = portalUser.name;
+      req.log.info({ submissionId: submission.id, portalUserId: portalUser.id }, "Intake linked to portal client");
+    }
+  } catch (err) {
+    req.log.warn({ err }, "Failed to auto-link intake to portal user");
+  }
+
   // Send admin notification
   try {
     const submittedAt = new Date().toLocaleString("en-US", {
@@ -240,19 +269,19 @@ router.post("/intake", async (req: Request, res: Response): Promise<void> => {
       services: submission.services,
       timeline: submission.timeline,
       submittedAt,
+      portalClientName,
     });
     await resend.emails.send({
       from: "Stonegate Intelligence Group <noreply@stonegateintelligence.com>",
       to: ["Monica.Morgado@stonegateintelligence.com"],
       replyTo: submission.email,
-      subject: `New Intake Submission #${submission.id} — ${submission.fullName}`,
+      subject: `New Intake Submission #${submission.id} — ${submission.fullName}${portalClientName ? " (Portal Client)" : ""}`,
       html,
       text,
     });
     req.log.info({ submissionId: submission.id }, "Admin notification sent");
   } catch (err) {
     req.log.error({ err }, "Failed to send admin notification for intake");
-    // Don't fail the response — submission is saved
   }
 
   res.status(201).json({
@@ -263,9 +292,11 @@ router.post("/intake", async (req: Request, res: Response): Promise<void> => {
 
 // ── Admin routes (require admin session) ─────────────────────────────────────
 
-// GET /api/portal/admin/inquiries
-router.get("/portal/admin/inquiries", requireAdmin, async (_req: Request, res: Response) => {
-  const submissions = await db
+// GET /api/portal/admin/inquiries — list all, optionally filtered by ?userId=
+router.get("/portal/admin/inquiries", requireAdmin, async (req: Request, res: Response) => {
+  const userId = req.query.userId ? Number(req.query.userId) : null;
+
+  let query = db
     .select({
       id: intakeSubmissionsTable.id,
       fullName: intakeSubmissionsTable.fullName,
@@ -277,24 +308,64 @@ router.get("/portal/admin/inquiries", requireAdmin, async (_req: Request, res: R
       status: intakeSubmissionsTable.status,
       submissionDate: intakeSubmissionsTable.submissionDate,
       createdAt: intakeSubmissionsTable.createdAt,
+      portalUserId: intakeSubmissionsTable.portalUserId,
+      portalClientName: portalUsersTable.name,
     })
     .from(intakeSubmissionsTable)
+    .leftJoin(portalUsersTable, eq(intakeSubmissionsTable.portalUserId, portalUsersTable.id))
     .orderBy(desc(intakeSubmissionsTable.createdAt));
-  res.json(submissions);
+
+  const results = userId
+    ? (await query).filter(r => r.portalUserId === userId)
+    : await query;
+
+  res.json(results);
 });
 
-// GET /api/portal/admin/inquiries/:id
+// GET /api/portal/admin/inquiries/:id — full detail
 router.get("/portal/admin/inquiries/:id", requireAdmin, async (req: Request, res: Response) => {
-  const [sub] = await db
-    .select()
+  const results = await db
+    .select({
+      id: intakeSubmissionsTable.id,
+      fullName: intakeSubmissionsTable.fullName,
+      submissionDate: intakeSubmissionsTable.submissionDate,
+      referredBy: intakeSubmissionsTable.referredBy,
+      mailingAddress: intakeSubmissionsTable.mailingAddress,
+      phone: intakeSubmissionsTable.phone,
+      email: intakeSubmissionsTable.email,
+      preferredContact: intakeSubmissionsTable.preferredContact,
+      bestTime: intakeSubmissionsTable.bestTime,
+      clientType: intakeSubmissionsTable.clientType,
+      services: intakeSubmissionsTable.services,
+      otherServiceDescription: intakeSubmissionsTable.otherServiceDescription,
+      engagementDetails: intakeSubmissionsTable.engagementDetails,
+      timeline: intakeSubmissionsTable.timeline,
+      targetCompletionDate: intakeSubmissionsTable.targetCompletionDate,
+      engagementStructure: intakeSubmissionsTable.engagementStructure,
+      budgetRange: intakeSubmissionsTable.budgetRange,
+      budgetNotes: intakeSubmissionsTable.budgetNotes,
+      acknowledged: intakeSubmissionsTable.acknowledged,
+      electronicSignature: intakeSubmissionsTable.electronicSignature,
+      signatureDate: intakeSubmissionsTable.signatureDate,
+      status: intakeSubmissionsTable.status,
+      internalNotes: intakeSubmissionsTable.internalNotes,
+      portalUserId: intakeSubmissionsTable.portalUserId,
+      createdAt: intakeSubmissionsTable.createdAt,
+      updatedAt: intakeSubmissionsTable.updatedAt,
+      // Portal client info
+      portalClientName: portalUsersTable.name,
+      portalClientEmail: portalUsersTable.email,
+    })
     .from(intakeSubmissionsTable)
+    .leftJoin(portalUsersTable, eq(intakeSubmissionsTable.portalUserId, portalUsersTable.id))
     .where(eq(intakeSubmissionsTable.id, Number(req.params.id)))
     .limit(1);
-  if (!sub) { res.status(404).json({ error: "Not found." }); return; }
-  res.json(sub);
+
+  if (!results[0]) { res.status(404).json({ error: "Not found." }); return; }
+  res.json(results[0]);
 });
 
-// PATCH /api/portal/admin/inquiries/:id
+// PATCH /api/portal/admin/inquiries/:id — update status / notes
 router.patch("/portal/admin/inquiries/:id", requireAdmin, async (req: Request, res: Response) => {
   const { status, internalNotes } = req.body;
   const [updated] = await db

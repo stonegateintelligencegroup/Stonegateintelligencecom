@@ -1,4 +1,4 @@
-import { pgTable, serial, text, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, boolean, timestamp, integer } from "drizzle-orm/pg-core";
 
 export const intakeSubmissionsTable = pgTable("intake_submissions", {
   id: serial("id").primaryKey(),
@@ -28,6 +28,7 @@ export const intakeSubmissionsTable = pgTable("intake_submissions", {
   electronicSignature: text("electronic_signature").notNull(),
   signatureDate: text("signature_date").notNull(),
   // Admin fields
+  portalUserId: integer("portal_user_id"), // linked portal_users.id (set when email matches a client account)
   status: text("status").notNull().default("new_inquiry"),
   internalNotes: text("internal_notes"),
   ipAddress: text("ip_address"),
