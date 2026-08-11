@@ -80,29 +80,29 @@ export default function AdminDashboard() {
             {/* Stats */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               {[
-                { label: "Total Clients", value: clients.length, path: null },
-                { label: "Active Clients", value: clients.filter(c => c.isActive).length, path: null },
-                { label: "Total Cases", value: cases.length, path: null },
-                { label: "Active Cases", value: cases.filter(c => c.status === "active").length, path: null },
-                { label: "Inquiries", value: inquiries.length, path: "/portal/admin/inquiries" },
+                { label: "Total Clients",  value: clients.length,                                    anchor: "section-clients",  path: null },
+                { label: "Active Clients", value: clients.filter(c => c.isActive).length,            anchor: "section-clients",  path: null },
+                { label: "Total Cases",    value: cases.length,                                      anchor: "section-cases",    path: null },
+                { label: "Active Cases",   value: cases.filter(c => c.status === "active").length,   anchor: "section-cases",    path: null },
+                { label: "Inquiries",      value: inquiries.length,                                  anchor: null,               path: "/portal/admin/inquiries" },
               ].map(s => (
-                s.path ? (
-                  <button key={s.label} onClick={() => setLocation(s.path!)}
-                    className="border border-primary/30 rounded-lg p-5 bg-primary/5 hover:bg-primary/10 hover:border-primary/50 transition-colors text-left">
-                    <p className="text-2xl font-serif text-foreground mb-1">{s.value}</p>
-                    <p className="text-xs tracking-[0.1em] uppercase text-primary/70">{s.label}</p>
-                  </button>
-                ) : (
-                  <div key={s.label} className="border border-white/10 rounded-lg p-5 bg-white/2">
-                    <p className="text-2xl font-serif text-foreground mb-1">{s.value}</p>
-                    <p className="text-xs tracking-[0.1em] uppercase text-muted-foreground">{s.label}</p>
-                  </div>
-                )
+                <button
+                  key={s.label}
+                  onClick={() => s.path ? setLocation(s.path) : document.getElementById(s.anchor!)?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                  className={`rounded-lg p-5 text-left transition-colors ${
+                    s.path
+                      ? "border border-primary/30 bg-primary/5 hover:bg-primary/10 hover:border-primary/50"
+                      : "border border-white/10 bg-white/2 hover:bg-white/4 hover:border-white/20"
+                  }`}
+                >
+                  <p className="text-2xl font-serif text-foreground mb-1">{s.value}</p>
+                  <p className={`text-xs tracking-[0.1em] uppercase ${s.path ? "text-primary/70" : "text-muted-foreground"}`}>{s.label}</p>
+                </button>
               ))}
             </div>
 
             {/* Cases */}
-            <div>
+            <div id="section-cases">
               <div className="flex items-center gap-3 mb-6">
                 <Briefcase className="w-4 h-4 text-primary" />
                 <h2 className="font-serif text-xl text-foreground">All Cases</h2>
@@ -175,7 +175,7 @@ export default function AdminDashboard() {
             )}
 
             {/* Clients */}
-            <div>
+            <div id="section-clients">
               <div className="flex items-center gap-3 mb-6">
                 <Users className="w-4 h-4 text-primary" />
                 <h2 className="font-serif text-xl text-foreground">Clients</h2>
