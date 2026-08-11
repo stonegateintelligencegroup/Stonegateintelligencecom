@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { ArrowLeft, ArrowRight, AlertCircle, ExternalLink } from "lucide-react";
+import { ArrowLeft, ArrowRight, AlertCircle, ExternalLink, Trash2 } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -67,6 +67,8 @@ export default function AdminInquiries() {
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Support ?userId= filter (e.g. when navigating from a client view)
   const userId = typeof window !== "undefined"
@@ -93,6 +95,21 @@ export default function AdminInquiries() {
     } catch { setError("Failed to load submission."); }
   };
 
+  const deleteCase = async () => {
+    if (!selected) return;
+    setDeleting(true);
+    try {
+      const r = await fetch(`${BASE}/api/portal/admin/inquiries/${selected.id}`, {
+        method: "DELETE", credentials: "include",
+      });
+      if (!r.ok) { setError("Delete failed."); setDeleting(false); setConfirmDelete(false); return; }
+      setInquiries(prev => prev.filter(i => i.id !== selected.id));
+      setSelected(null);
+      setConfirmDelete(false);
+    } catch { setError("Network error."); }
+    finally { setDeleting(false); }
+  };
+
   const save = async () => {
     if (!selected) return;
     setSaving(true); setSaved(false);
@@ -116,10 +133,30 @@ export default function AdminInquiries() {
     return (
       <div className="min-h-screen bg-background pt-24 pb-16">
         <div className="container mx-auto px-4 md:px-8 max-w-4xl">
-          <button onClick={() => setSelected(null)}
-            className="flex items-center gap-2 text-muted-foreground hover:text-primary text-sm mb-8 transition-colors">
-            <ArrowLeft className="w-4 h-4" /> Back to Inquiries
-          </button>
+          <div className="flex items-center justify-between mb-8">
+            <button onClick={() => { setSelected(null); setConfirmDelete(false); }}
+              className="flex items-center gap-2 text-muted-foreground hover:text-primary text-sm transition-colors">
+              <ArrowLeft className="w-4 h-4" /> Back to Inquiries
+            </button>
+            {!confirmDelete ? (
+              <button onClick={() => setConfirmDelete(true)}
+                className="flex items-center gap-2 text-muted-foreground hover:text-red-400 text-sm transition-colors">
+                <Trash2 className="w-4 h-4" /> Delete Case
+              </button>
+            ) : (
+              <div className="flex items-center gap-3 bg-red-900/10 border border-red-900/30 rounded px-4 py-2">
+                <span className="text-xs text-red-300">Permanently delete this case?</span>
+                <button onClick={deleteCase} disabled={deleting}
+                  className="text-xs bg-red-700 hover:bg-red-600 text-white px-3 py-1 rounded transition-colors disabled:opacity-50">
+                  {deleting ? "Deleting…" : "Yes, delete"}
+                </button>
+                <button onClick={() => setConfirmDelete(false)}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                  Cancel
+                </button>
+              </div>
+            )}
+          </div>
 
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-8">
             <div>

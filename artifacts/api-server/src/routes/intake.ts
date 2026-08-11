@@ -365,6 +365,18 @@ router.get("/portal/admin/inquiries/:id", requireAdmin, async (req: Request, res
   res.json(results[0]);
 });
 
+// DELETE /api/portal/admin/inquiries/:id — permanently remove a submission
+router.delete("/portal/admin/inquiries/:id", requireAdmin, async (req: Request, res: Response) => {
+  const id = Number(req.params.id);
+  const deleted = await db
+    .delete(intakeSubmissionsTable)
+    .where(eq(intakeSubmissionsTable.id, id))
+    .returning({ id: intakeSubmissionsTable.id });
+  if (!deleted[0]) { res.status(404).json({ error: "Not found." }); return; }
+  req.log.info({ submissionId: id }, "Intake submission deleted by admin");
+  res.status(200).json({ deleted: true, id });
+});
+
 // PATCH /api/portal/admin/inquiries/:id — update status / notes
 router.patch("/portal/admin/inquiries/:id", requireAdmin, async (req: Request, res: Response) => {
   const { status, internalNotes } = req.body;
