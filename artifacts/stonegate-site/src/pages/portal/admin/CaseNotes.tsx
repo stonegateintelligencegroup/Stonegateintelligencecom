@@ -343,7 +343,9 @@ export default function CaseNotes({ caseId }: { caseId: number; adminId: number 
                       <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
                         <FileText size={11} style={{ marginTop: 2, flexShrink: 0, color: active ? "var(--primary)" : "var(--muted-foreground)" }} />
                         <div style={{ minWidth: 0 }}>
-                          <p style={{ fontSize: 12, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: active ? "var(--primary)" : "var(--foreground)", margin: 0 }}>
+                          <p style={{ fontSize: 12, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "var(--primary)", textDecoration: active ? "underline" : "none", margin: 0 }}
+                            onMouseEnter={e => (e.currentTarget.style.textDecoration = "underline")}
+                            onMouseLeave={e => (e.currentTarget.style.textDecoration = active ? "underline" : "none")}>
                             {note.title || "Untitled Note"}
                           </p>
                           <p style={{ fontSize: 10, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 2 }}>
