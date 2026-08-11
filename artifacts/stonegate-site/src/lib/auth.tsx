@@ -40,7 +40,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => { refresh(); }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<AuthUser> => {
     const res = await fetch(`${BASE}/api/auth/login`, {
       method: "POST",
       credentials: "include",
@@ -51,7 +51,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { error } = await res.json();
       throw new Error(error ?? "Login failed.");
     }
-    setUser(await res.json());
+    const user: AuthUser = await res.json();
+    setUser(user);
+    return user;
   };
 
   const logout = async () => {
