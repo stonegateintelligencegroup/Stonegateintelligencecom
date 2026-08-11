@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
-import { Users, Briefcase, LogOut, Plus } from "lucide-react";
+import { Users, Briefcase, LogOut, Plus, ClipboardList } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -10,6 +10,10 @@ interface Case {
   id: number; caseNumber: string; status: string;
   clientId: number; clientName: string | null; clientEmail: string | null;
   assignedInvestigator: string | null; lastUpdate: string;
+}
+interface InquirySummary {
+  id: number; fullName: string; email: string; status: string; createdAt: string;
+  portalClientName: string | null;
 }
 
 const STATUS_COLOR: Record<string, string> = {
@@ -24,13 +28,19 @@ export default function AdminDashboard() {
   const [, setLocation] = useLocation();
   const [clients, setClients] = useState<Client[]>([]);
   const [cases, setCases] = useState<Case[]>([]);
+  const [inquiries, setInquiries] = useState<InquirySummary[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
       fetch(`${BASE}/api/portal/admin/clients`, { credentials: "include" }).then(r => r.json()),
       fetch(`${BASE}/api/portal/admin/cases`, { credentials: "include" }).then(r => r.json()),
-    ]).then(([c, ca]) => { setClients(c); setCases(ca); }).finally(() => setLoading(false));
+      fetch(`${BASE}/api/portal/admin/inquiries`, { credentials: "include" }).then(r => r.json()),
+    ]).then(([c, ca, inq]) => {
+      setClients(c);
+      setCases(ca);
+      setInquiries(Array.isArray(inq) ? inq : []);
+    }).finally(() => setLoading(false));
   }, []);
 
   const handleLogout = async () => { await logout(); setLocation("/portal/login"); };
@@ -68,17 +78,26 @@ export default function AdminDashboard() {
         {loading ? <p className="text-sm text-muted-foreground">Loading…</p> : (
           <div className="space-y-12">
             {/* Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               {[
-                { label: "Total Clients", value: clients.length },
-                { label: "Active Clients", value: clients.filter(c => c.isActive).length },
-                { label: "Total Cases", value: cases.length },
-                { label: "Active Cases", value: cases.filter(c => c.status === "active").length },
+                { label: "Total Clients", value: clients.length, path: null },
+                { label: "Active Clients", value: clients.filter(c => c.isActive).length, path: null },
+                { label: "Total Cases", value: cases.length, path: null },
+                { label: "Active Cases", value: cases.filter(c => c.status === "active").length, path: null },
+                { label: "Inquiries", value: inquiries.length, path: "/portal/admin/inquiries" },
               ].map(s => (
-                <div key={s.label} className="border border-white/10 rounded-lg p-5 bg-white/2">
-                  <p className="text-2xl font-serif text-foreground mb-1">{s.value}</p>
-                  <p className="text-xs tracking-[0.1em] uppercase text-muted-foreground">{s.label}</p>
-                </div>
+                s.path ? (
+                  <button key={s.label} onClick={() => setLocation(s.path!)}
+                    className="border border-primary/30 rounded-lg p-5 bg-primary/5 hover:bg-primary/10 hover:border-primary/50 transition-colors text-left">
+                    <p className="text-2xl font-serif text-foreground mb-1">{s.value}</p>
+                    <p className="text-xs tracking-[0.1em] uppercase text-primary/70">{s.label}</p>
+                  </button>
+                ) : (
+                  <div key={s.label} className="border border-white/10 rounded-lg p-5 bg-white/2">
+                    <p className="text-2xl font-serif text-foreground mb-1">{s.value}</p>
+                    <p className="text-xs tracking-[0.1em] uppercase text-muted-foreground">{s.label}</p>
+                  </div>
+                )
               ))}
             </div>
 
@@ -118,6 +137,42 @@ export default function AdminDashboard() {
                 </div>
               )}
             </div>
+
+            {/* Recent Inquiries */}
+            {inquiries.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <ClipboardList className="w-4 h-4 text-primary" />
+                    <h2 className="font-serif text-xl text-foreground">Recent Inquiries</h2>
+                  </div>
+                  <button onClick={() => setLocation("/portal/admin/inquiries")}
+                    className="text-xs text-primary/70 hover:text-primary transition-colors">
+                    View all →
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {inquiries.slice(0, 5).map(inq => (
+                    <button key={inq.id} onClick={() => setLocation("/portal/admin/inquiries")}
+                      className="w-full flex items-center justify-between border border-white/10 hover:border-primary/30 rounded-lg px-5 py-4 bg-white/2 transition-colors text-left group">
+                      <div>
+                        <p className="text-sm text-foreground group-hover:text-primary transition-colors">{inq.fullName}</p>
+                        <p className="text-xs text-muted-foreground">{inq.email}{inq.portalClientName && <span className="text-primary/60 ml-2">· Portal Client</span>}</p>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <p className="text-xs text-muted-foreground hidden md:block">{new Date(inq.createdAt).toLocaleDateString()}</p>
+                        <span className={`text-xs px-2.5 py-1 rounded border tracking-[0.05em] uppercase ${
+                          inq.status === "new_inquiry" ? "text-amber-400 border-amber-400/30 bg-amber-400/10" :
+                          inq.status === "accepted"    ? "text-green-400 border-green-400/30 bg-green-400/10" :
+                          inq.status === "declined"    ? "text-red-400 border-red-400/30 bg-red-400/10" :
+                          "text-blue-400 border-blue-400/30 bg-blue-400/10"
+                        }`}>{inq.status.replace(/_/g, " ")}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Clients */}
             <div>
