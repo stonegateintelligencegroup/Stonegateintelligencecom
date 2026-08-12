@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRoute, useLocation } from "wouter";
-import { ArrowLeft, Printer, Pencil, Send, CheckCircle, XCircle } from "lucide-react";
+import { Printer, Pencil, Send, Mail } from "lucide-react";
 import BillingLayout from "./BillingLayout";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -47,6 +47,8 @@ export default function AdminStatementDetail() {
   const [publishing, setPublishing] = useState(false);
   const [statusChange, setStatusChange] = useState("");
   const [changingStatus, setChangingStatus] = useState(false);
+  const [emailing, setEmailing] = useState(false);
+  const [emailResult, setEmailResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
   const load = () => {
     if (!id) return;
@@ -64,6 +66,26 @@ export default function AdminStatementDetail() {
     await fetch(`${BASE}/api/portal/billing/statements/${id}/publish`, { method: "POST", credentials: "include" });
     setPublishing(false);
     load();
+  };
+
+  const sendEmail = async () => {
+    if (!id) return;
+    setEmailing(true);
+    setEmailResult(null);
+    try {
+      const r = await fetch(`${BASE}/api/portal/billing/statements/${id}/send-email`, {
+        method: "POST", credentials: "include",
+      });
+      const data = await r.json();
+      if (r.ok) {
+        setEmailResult({ ok: true, msg: `Sent to: ${data.sentTo?.join(", ") ?? "recipients"}` });
+      } else {
+        setEmailResult({ ok: false, msg: data.error ?? "Failed to send." });
+      }
+    } catch {
+      setEmailResult({ ok: false, msg: "Network error — could not send email." });
+    }
+    setEmailing(false);
   };
 
   const changeStatus = async () => {
@@ -115,8 +137,12 @@ export default function AdminStatementDetail() {
         </div>
         <div className="flex items-center gap-3 flex-wrap justify-end">
           <button onClick={() => window.print()}
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-white/10 hover:border-white/20 px-3 py-2 rounded transition-colors">
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-white/10 hover:border-white/20 px-3 py-2 rounded transition-colors print:hidden">
             <Printer className="w-3.5 h-3.5" /> Print
+          </button>
+          <button onClick={sendEmail} disabled={emailing}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-white/10 hover:border-white/20 px-3 py-2 rounded transition-colors disabled:opacity-50 print:hidden">
+            <Mail className="w-3.5 h-3.5" /> {emailing ? "Sending…" : "Email Statement"}
           </button>
           {statement.status === "draft" && (
             <>
@@ -149,6 +175,14 @@ export default function AdminStatementDetail() {
           )}
         </div>
       </div>
+
+      {/* Email result feedback */}
+      {emailResult && (
+        <div className={`mb-4 flex items-center justify-between px-4 py-3 rounded-lg border text-sm print:hidden ${emailResult.ok ? "bg-emerald-400/5 border-emerald-400/20 text-emerald-400" : "bg-red-900/20 border-red-500/30 text-red-400"}`}>
+          <span>{emailResult.ok ? "✓ " : "✗ "}{emailResult.msg}</span>
+          <button onClick={() => setEmailResult(null)} className="text-xs opacity-60 hover:opacity-100 ml-4">✕</button>
+        </div>
+      )}
 
       {/* Admin-only info banner */}
       <div className="mb-6 flex items-center gap-3 bg-yellow-400/5 border border-yellow-400/20 rounded-lg px-4 py-3">

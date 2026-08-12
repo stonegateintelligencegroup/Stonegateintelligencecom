@@ -1,4 +1,5 @@
 import { Router, Request, Response } from "express";
+import { Resend } from "resend";
 import { db } from "@workspace/db";
 import {
   billingClientsTable,
@@ -13,6 +14,9 @@ import {
 } from "@workspace/db";
 import { eq, desc, and, gte, lte, inArray, sql, asc } from "drizzle-orm";
 import { requireAdmin } from "../middlewares/auth";
+import { portalUsersTable } from "@workspace/db";
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const router = Router();
 router.use(requireAdmin);
@@ -1118,6 +1122,176 @@ async function recalcStatementCharges(statementId: number) {
   const amountDue = Math.max(0, pb + total - pc - ra);
   await db.update(billingStatementsTable).set({ currentCharges: String(total), amountDue: String(amountDue), updatedAt: new Date() }).where(eq(billingStatementsTable.id, statementId));
 }
+
+// POST /api/portal/billing/statements/:id/send-email
+// Sends the statement to the client's billing email + always CCs Monica
+router.post("/statements/:id/send-email", async (req: Request, res: Response) => {
+  const id = Number(req.params.id);
+
+  const [row] = await db
+    .select({
+      stmt: billingStatementsTable,
+      clientName: billingClientsTable.name,
+      clientAddress: billingClientsTable.address,
+      clientEmail: billingClientsTable.billingEmail,
+      clientEmailAlt: billingClientsTable.email,
+      linkedPortalUserId: billingClientsTable.linkedPortalUserId,
+      engagementName: billingEngagementsTable.name,
+    })
+    .from(billingStatementsTable)
+    .leftJoin(billingClientsTable, eq(billingStatementsTable.billingClientId, billingClientsTable.id))
+    .leftJoin(billingEngagementsTable, eq(billingStatementsTable.engagementId, billingEngagementsTable.id))
+    .where(eq(billingStatementsTable.id, id));
+
+  if (!row) { res.status(404).json({ error: "Statement not found." }); return; }
+
+  const items = await db
+    .select()
+    .from(billingStatementItemsTable)
+    .where(eq(billingStatementItemsTable.statementId, id))
+    .orderBy(asc(billingStatementItemsTable.sortOrder), asc(billingStatementItemsTable.id));
+
+  // Resolve client email: billing email → regular email → portal user email
+  let toEmail = row.clientEmail || row.clientEmailAlt;
+  if (!toEmail && row.linkedPortalUserId) {
+    const [pu] = await db.select({ email: portalUsersTable.email })
+      .from(portalUsersTable).where(eq(portalUsersTable.id, row.linkedPortalUserId)).limit(1);
+    if (pu) toEmail = pu.email;
+  }
+
+  const ADMIN_EMAIL = "monica.morgado@stonegateintelligence.com";
+  const s = row.stmt;
+
+  const fmt = (n: string | number) => {
+    const v = parseFloat(String(n));
+    return isNaN(v) ? "$0.00" : `$${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
+  const hasPrev = parseFloat(String(s.previousBalance ?? 0)) > 0;
+  const hasPay = parseFloat(String(s.paymentsCredits ?? 0)) > 0;
+  const hasRet = parseFloat(String(s.retainerApplied ?? 0)) > 0;
+  const showQty = items.some(i => i.showQuantity && i.quantity != null);
+  const showRate = items.some(i => i.showRate && i.rate != null);
+
+  const itemRows = items.map(item => `
+    <tr>
+      <td style="padding:10px 16px;border-bottom:1px solid #e5e7eb;color:#111827;">${item.description}</td>
+      <td style="padding:10px 16px;border-bottom:1px solid #e5e7eb;color:#6b7280;white-space:nowrap;">${item.servicePeriod ?? "—"}</td>
+      ${showQty ? `<td style="padding:10px 16px;border-bottom:1px solid #e5e7eb;text-align:right;color:#111827;">${item.showQuantity && item.quantity ? parseFloat(item.quantity).toFixed(2) : "—"}</td>` : ""}
+      ${showRate ? `<td style="padding:10px 16px;border-bottom:1px solid #e5e7eb;text-align:right;color:#6b7280;">${item.showRate && item.rate ? fmt(item.rate) : "—"}</td>` : ""}
+      <td style="padding:10px 16px;border-bottom:1px solid #e5e7eb;text-align:right;color:#111827;font-weight:600;">${fmt(item.amount)}</td>
+    </tr>`).join("");
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Billing Statement ${s.statementNumber}</title></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:Georgia,serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:32px 16px;">
+  <tr><td align="center">
+    <table width="640" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.1);">
+
+      <!-- Header -->
+      <tr><td style="background:#0f1115;padding:32px 40px;">
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td>
+              <p style="margin:0;color:#c0392b;font-size:11px;letter-spacing:0.35em;text-transform:uppercase;">Stonegate</p>
+              <p style="margin:2px 0 0;color:#c0392b;font-size:11px;letter-spacing:0.35em;text-transform:uppercase;">Intelligence Group</p>
+              <p style="margin:8px 0 0;color:#6b7280;font-size:10px;letter-spacing:0.1em;font-style:italic;">Every question deserves an answer grounded in evidence</p>
+            </td>
+            <td align="right">
+              <p style="margin:0;color:#ffffff;font-size:20px;font-family:Georgia,serif;">Monthly Billing Statement</p>
+              <p style="margin:4px 0 0;color:#9ca3af;font-size:11px;">Stonegate Intelligence Group, LLC</p>
+            </td>
+          </tr>
+        </table>
+      </td></tr>
+
+      <!-- Meta + Bill To -->
+      <tr><td style="padding:32px 40px 0;">
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td width="50%" valign="top">
+              <p style="margin:0 0 12px;color:#6b7280;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;font-family:Arial,sans-serif;">Statement Details</p>
+              <table cellpadding="0" cellspacing="0">
+                <tr><td style="color:#6b7280;font-size:12px;padding:2px 16px 2px 0;font-family:Arial,sans-serif;">Statement Number</td><td style="color:#111827;font-size:12px;font-weight:600;font-family:Arial,sans-serif;">${s.statementNumber}</td></tr>
+                <tr><td style="color:#6b7280;font-size:12px;padding:2px 16px 2px 0;font-family:Arial,sans-serif;">Statement Date</td><td style="color:#111827;font-size:12px;font-weight:600;font-family:Arial,sans-serif;">${s.statementDate}</td></tr>
+                <tr><td style="color:#6b7280;font-size:12px;padding:2px 16px 2px 0;font-family:Arial,sans-serif;">Billing Period</td><td style="color:#111827;font-size:12px;font-weight:600;font-family:Arial,sans-serif;">${s.billingPeriod}</td></tr>
+                ${s.dueDate ? `<tr><td style="color:#6b7280;font-size:12px;padding:2px 16px 2px 0;font-family:Arial,sans-serif;">Due Date</td><td style="color:#c0392b;font-size:12px;font-weight:700;font-family:Arial,sans-serif;">${s.dueDate}</td></tr>` : ""}
+              </table>
+            </td>
+            <td width="50%" valign="top">
+              <p style="margin:0 0 12px;color:#6b7280;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;font-family:Arial,sans-serif;">Bill To</p>
+              <p style="margin:0;color:#111827;font-size:14px;font-weight:700;">${row.clientName ?? "—"}</p>
+              ${row.engagementName ? `<p style="margin:4px 0 0;color:#6b7280;font-size:12px;font-family:Arial,sans-serif;">Re: ${row.engagementName}</p>` : ""}
+              ${row.clientAddress ? `<p style="margin:8px 0 0;color:#6b7280;font-size:12px;font-family:Arial,sans-serif;white-space:pre-line;">${row.clientAddress}</p>` : ""}
+              ${toEmail ? `<p style="margin:4px 0 0;color:#6b7280;font-size:12px;font-family:Arial,sans-serif;">${toEmail}</p>` : ""}
+            </td>
+          </tr>
+        </table>
+      </td></tr>
+
+      <!-- Services table -->
+      <tr><td style="padding:32px 40px 0;">
+        <p style="margin:0 0 12px;color:#6b7280;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;font-family:Arial,sans-serif;">Services</p>
+        <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;">
+          <thead>
+            <tr style="background:#f9fafb;">
+              <th style="padding:10px 16px;text-align:left;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:#6b7280;font-weight:500;font-family:Arial,sans-serif;border-bottom:1px solid #e5e7eb;">Description</th>
+              <th style="padding:10px 16px;text-align:left;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:#6b7280;font-weight:500;font-family:Arial,sans-serif;border-bottom:1px solid #e5e7eb;white-space:nowrap;">Service Period</th>
+              ${showQty ? `<th style="padding:10px 16px;text-align:right;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:#6b7280;font-weight:500;font-family:Arial,sans-serif;border-bottom:1px solid #e5e7eb;">Hrs / Units</th>` : ""}
+              ${showRate ? `<th style="padding:10px 16px;text-align:right;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:#6b7280;font-weight:500;font-family:Arial,sans-serif;border-bottom:1px solid #e5e7eb;">Rate</th>` : ""}
+              <th style="padding:10px 16px;text-align:right;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:#6b7280;font-weight:500;font-family:Arial,sans-serif;border-bottom:1px solid #e5e7eb;">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemRows || `<tr><td colspan="5" style="padding:20px;text-align:center;color:#6b7280;font-size:12px;font-family:Arial,sans-serif;">No services listed.</td></tr>`}
+          </tbody>
+        </table>
+      </td></tr>
+
+      <!-- Totals -->
+      <tr><td style="padding:24px 40px 0;" align="right">
+        <table cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;min-width:280px;">
+          <tbody>
+            ${hasPrev ? `<tr style="border-bottom:1px solid #e5e7eb;"><td style="padding:10px 16px;color:#6b7280;font-size:12px;font-family:Arial,sans-serif;">Previous Balance</td><td style="padding:10px 16px;text-align:right;color:#111827;font-size:12px;font-family:Arial,sans-serif;">${fmt(s.previousBalance ?? 0)}</td></tr>` : ""}
+            <tr style="border-bottom:1px solid #e5e7eb;"><td style="padding:10px 16px;color:#6b7280;font-size:12px;font-family:Arial,sans-serif;">Current Charges</td><td style="padding:10px 16px;text-align:right;color:#111827;font-size:12px;font-family:Arial,sans-serif;">${fmt(s.currentCharges ?? 0)}</td></tr>
+            ${hasPay ? `<tr style="border-bottom:1px solid #e5e7eb;"><td style="padding:10px 16px;color:#6b7280;font-size:12px;font-family:Arial,sans-serif;">Payments / Credits</td><td style="padding:10px 16px;text-align:right;color:#059669;font-size:12px;font-family:Arial,sans-serif;">(${fmt(s.paymentsCredits ?? 0)})</td></tr>` : ""}
+            ${hasRet ? `<tr style="border-bottom:1px solid #e5e7eb;"><td style="padding:10px 16px;color:#6b7280;font-size:12px;font-family:Arial,sans-serif;">Retainer Applied</td><td style="padding:10px 16px;text-align:right;color:#059669;font-size:12px;font-family:Arial,sans-serif;">(${fmt(s.retainerApplied ?? 0)})</td></tr>` : ""}
+            <tr style="background:#f9fafb;"><td style="padding:14px 16px;color:#111827;font-size:14px;font-weight:700;font-family:Georgia,serif;">Total Due</td><td style="padding:14px 16px;text-align:right;color:#c0392b;font-size:18px;font-weight:700;font-family:Georgia,serif;">${fmt(s.amountDue ?? 0)}</td></tr>
+          </tbody>
+        </table>
+      </td></tr>
+
+      <!-- Footer -->
+      <tr><td style="padding:32px 40px;border-top:1px solid #e5e7eb;margin-top:32px;text-align:center;">
+        <p style="margin:0;color:#9ca3af;font-size:10px;letter-spacing:0.15em;text-transform:uppercase;font-family:Arial,sans-serif;">Stonegate Intelligence Group, LLC — Confidential</p>
+        <p style="margin:8px 0 0;color:#9ca3af;font-size:11px;font-family:Arial,sans-serif;">Questions? Contact us at <a href="mailto:${ADMIN_EMAIL}" style="color:#c0392b;">${ADMIN_EMAIL}</a></p>
+      </td></tr>
+
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>`;
+
+  const recipients: string[] = [ADMIN_EMAIL];
+  if (toEmail && toEmail.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+    recipients.push(toEmail);
+  }
+
+  try {
+    await resend.emails.send({
+      from: "Stonegate Intelligence Group <noreply@stonegateintelligence.com>",
+      to: recipients,
+      subject: `Billing Statement ${s.statementNumber} — ${s.billingPeriod}${row.clientName ? ` · ${row.clientName}` : ""}`,
+      html,
+    });
+    res.json({ ok: true, sentTo: recipients });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message ?? "Failed to send email." });
+  }
+});
 
 // GET /api/portal/billing/statements/:id/available-time-entries
 // Returns unbilled time entries for the statement's client/engagement (admin only, never exposed to client)

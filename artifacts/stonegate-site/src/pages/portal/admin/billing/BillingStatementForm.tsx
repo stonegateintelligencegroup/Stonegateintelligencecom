@@ -41,6 +41,7 @@ export default function BillingStatementForm() {
   const editId = isEdit ? Number(paramsEdit.id) : null;
 
   const today = new Date().toISOString().split("T")[0];
+  const defaultPeriod = new Date().toLocaleString("en-US", { month: "long", year: "numeric" });
 
   const [clients, setClients] = useState<Client[]>([]);
   const [engagements, setEngagements] = useState<Engagement[]>([]);
@@ -53,13 +54,14 @@ export default function BillingStatementForm() {
   const [entryClientId, setEntryClientId] = useState("");
   const [entryEngagementId, setEntryEngagementId] = useState("");
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const [activeTab, setActiveTab] = useState<"details" | "items" | "entries">("details");
 
   // Form state
   const [billingClientId, setBillingClientId] = useState("");
   const [engagementId, setEngagementId] = useState("");
   const [portalUserId, setPortalUserId] = useState("");
-  const [billingPeriod, setBillingPeriod] = useState("");
+  const [billingPeriod, setBillingPeriod] = useState(defaultPeriod);
   const [billingPeriodStart, setBillingPeriodStart] = useState("");
   const [billingPeriodEnd, setBillingPeriodEnd] = useState("");
   const [statementDate, setStatementDate] = useState(today);
@@ -200,63 +202,72 @@ export default function BillingStatementForm() {
   const save = async () => {
     if (!billingPeriod || !statementDate) return;
     setSaving(true);
+    setSaveError("");
 
-    const body = {
-      billingClientId: billingClientId ? Number(billingClientId) : null,
-      engagementId: engagementId ? Number(engagementId) : null,
-      portalUserId: portalUserId ? Number(portalUserId) : null,
-      billingPeriod, billingPeriodStart: billingPeriodStart || null, billingPeriodEnd: billingPeriodEnd || null,
-      statementDate, dueDate: dueDate || null,
-      previousBalance: parseFloat(previousBalance || "0"),
-      paymentsCredits: parseFloat(paymentsCredits || "0"),
-      retainerApplied: parseFloat(retainerApplied || "0"),
-      remainingRetainer: parseFloat(remainingRetainer || "0"),
-      adminNotes: adminNotes || null,
-    };
+    try {
+      const body = {
+        billingClientId: billingClientId ? Number(billingClientId) : null,
+        engagementId: engagementId ? Number(engagementId) : null,
+        portalUserId: portalUserId ? Number(portalUserId) : null,
+        billingPeriod, billingPeriodStart: billingPeriodStart || null, billingPeriodEnd: billingPeriodEnd || null,
+        statementDate, dueDate: dueDate || null,
+        previousBalance: parseFloat(previousBalance || "0"),
+        paymentsCredits: parseFloat(paymentsCredits || "0"),
+        retainerApplied: parseFloat(retainerApplied || "0"),
+        remainingRetainer: parseFloat(remainingRetainer || "0"),
+        adminNotes: adminNotes || null,
+      };
 
-    let stmtId = editId;
-    if (editId) {
-      await fetch(`${BASE}/api/portal/billing/statements/${editId}`, {
-        method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-    } else {
-      const res = await fetch(`${BASE}/api/portal/billing/statements`, {
-        method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      const data = await res.json();
-      stmtId = data.id;
-    }
+      let stmtId = editId;
+      if (editId) {
+        const r = await fetch(`${BASE}/api/portal/billing/statements/${editId}`, {
+          method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!r.ok) { const e = await r.json(); throw new Error(e.error ?? "Failed to save statement."); }
+      } else {
+        const r = await fetch(`${BASE}/api/portal/billing/statements`, {
+          method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!r.ok) { const e = await r.json(); throw new Error(e.error ?? "Failed to create statement."); }
+        const data = await r.json();
+        stmtId = data.id;
+      }
 
-    // Sync items: for new statements add all; for edits compare by id
-    if (stmtId) {
-      for (let idx = 0; idx < items.length; idx++) {
-        const item = { ...items[idx], sortOrder: idx };
-        const itemBody = {
-          description: item.description, servicePeriod: item.servicePeriod || null,
-          quantity: item.quantity ? parseFloat(item.quantity) : null,
-          rate: item.rate ? parseFloat(item.rate) : null,
-          amount: calcItemAmount(item),
-          showQuantity: item.showQuantity, showRate: item.showRate,
-          sortOrder: idx, timeEntryIds: item.timeEntryIds,
-        };
-        if (item.id) {
-          await fetch(`${BASE}/api/portal/billing/statements/${stmtId}/items/${item.id}`, {
-            method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(itemBody),
-          });
-        } else {
-          await fetch(`${BASE}/api/portal/billing/statements/${stmtId}/items`, {
-            method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(itemBody),
-          });
+      // Sync items — skip blank rows
+      const validItems = items.filter(i => i.description.trim());
+      if (stmtId && validItems.length > 0) {
+        for (let idx = 0; idx < validItems.length; idx++) {
+          const item = validItems[idx];
+          const itemBody = {
+            description: item.description, servicePeriod: item.servicePeriod || null,
+            quantity: item.quantity ? parseFloat(item.quantity) : null,
+            rate: item.rate ? parseFloat(item.rate) : null,
+            amount: calcItemAmount(item),
+            showQuantity: item.showQuantity, showRate: item.showRate,
+            sortOrder: idx, timeEntryIds: item.timeEntryIds,
+          };
+          if (item.id) {
+            await fetch(`${BASE}/api/portal/billing/statements/${stmtId}/items/${item.id}`, {
+              method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(itemBody),
+            });
+          } else {
+            await fetch(`${BASE}/api/portal/billing/statements/${stmtId}/items`, {
+              method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(itemBody),
+            });
+          }
         }
       }
-    }
 
-    setSaving(false);
-    setLocation(`/portal/admin/billing/statements/${stmtId}`);
+      setLocation(`/portal/admin/billing/statements/${stmtId}`);
+    } catch (err: any) {
+      setSaveError(err.message ?? "An unexpected error occurred.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const inp = "w-full bg-black border border-white/15 rounded px-3 py-2.5 text-sm text-foreground focus:outline-none focus:border-primary/60 transition-colors";
@@ -280,6 +291,12 @@ export default function BillingStatementForm() {
           </button>
         </div>
       </div>
+
+      {saveError && (
+        <div className="mb-6 px-4 py-3 bg-red-900/20 border border-red-500/30 rounded-lg text-sm text-red-400">
+          {saveError}
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-1 mb-6 border-b border-white/8">

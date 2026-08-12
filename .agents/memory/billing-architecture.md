@@ -63,3 +63,19 @@ Routes are registered in `App.tsx` at `/portal/admin/billing/*`, all admin-gated
 
 ## Rate auto-fill priority
 Time entry rate: engagement.hourlyRate → client.defaultRate → manual override.
+
+## Billing clients ↔ Portal users auto-link
+- `POST /portal/admin/clients` auto-creates a matching billing client (linkedPortalUserId set) so Monica can log hours immediately after adding a portal client.
+- `BillingClients.tsx` shows an "unlinked portal clients" banner for any portal user with no billing record — click to pre-fill the create form.
+- DELETE billing client cascades: statement items → statements → invoices → time_entries → engagements → client (FK order). Route now does this explicitly before deleting.
+
+## Statement email endpoint
+`POST /portal/billing/statements/:id/send-email` — builds a professional HTML email from statement data and sends via Resend to:
+1. Client's `billingEmail` (falls back to `email`, then portal user's email if linked)
+2. Always also sends to monica.morgado@stonegateintelligence.com
+Returns `{ ok: true, sentTo: [...] }`.
+
+## Statement form save fix
+- `billingPeriod` now defaults to current month/year on create so the Save button is never disabled by default.
+- Items loop filters out blank-description rows before POSTing to prevent 400 errors.
+- Save errors surface in a visible red banner instead of failing silently.
