@@ -71,7 +71,7 @@ router.post("/clients", async (req: Request, res: Response) => {
     : "https://stonegateintelligence.com";
   const inviteUrl = `${domain}/portal/invite/${inviteToken}`;
 
-  const intakeUrl = `${domain}/intake?onboarding=1`;
+  const intakeUrl = `${domain}/portal/intake`;
 
   await resend.emails.send({
     from: "Stonegate Intelligence Group <noreply@stonegateintelligence.com>",

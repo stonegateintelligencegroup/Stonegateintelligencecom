@@ -68,7 +68,6 @@ function Router() {
         <Route path="/" component={Home} />
         <Route path="/about" component={About} />
         <Route path="/services" component={Services} />
-        <Route path="/intake" component={Intake} />
         <Route path="/contact" component={Contact} />
         <Route path="/privacy" component={Privacy} />
 
@@ -82,6 +81,9 @@ function Router() {
         <Route path="/portal" component={Portal} />
 
         {/* Client portal */}
+        <Route path="/portal/intake">
+          <PortalGuard><Intake /></PortalGuard>
+        </Route>
         <Route path="/portal/dashboard">
           <PortalGuard><ClientDashboard /></PortalGuard>
         </Route>

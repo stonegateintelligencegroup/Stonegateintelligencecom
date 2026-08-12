@@ -61,6 +61,7 @@ export default function ClientDashboard() {
           <div className="flex items-center gap-6">
             <button onClick={() => setLocation("/portal/documents")} className="text-xs tracking-[0.1em] uppercase text-muted-foreground hover:text-primary transition-colors">Documents</button>
             <button onClick={() => setLocation("/portal/messages")} className="text-xs tracking-[0.1em] uppercase text-muted-foreground hover:text-primary transition-colors">Messages</button>
+            <button onClick={() => setLocation("/portal/intake")} className="text-xs tracking-[0.1em] uppercase text-muted-foreground hover:text-primary transition-colors">Intake Form</button>
             <button onClick={handleLogout} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors">
               <LogOut className="w-3.5 h-3.5" /> Sign Out
             </button>
