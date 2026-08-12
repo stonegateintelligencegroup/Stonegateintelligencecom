@@ -280,6 +280,38 @@ router.patch("/cases/:id", async (req: Request, res: Response) => {
   res.json(updated);
 });
 
+// GET /api/portal/admin/cases/:id/intake — intake submission linked to the case's client
+router.get("/cases/:id/intake", async (req: Request, res: Response) => {
+  const caseId = Number(req.params.id);
+
+  // Find the case to get its clientId
+  const [caseRow] = await db
+    .select({ clientId: portalCasesTable.clientId })
+    .from(portalCasesTable)
+    .where(eq(portalCasesTable.id, caseId))
+    .limit(1);
+
+  if (!caseRow) {
+    res.status(404).json({ error: "Case not found." });
+    return;
+  }
+
+  // Find the intake submission linked to this client (portal_user_id = clientId)
+  const [intake] = await db
+    .select()
+    .from(intakeSubmissionsTable)
+    .where(eq(intakeSubmissionsTable.portalUserId, caseRow.clientId))
+    .orderBy(desc(intakeSubmissionsTable.createdAt))
+    .limit(1);
+
+  if (!intake) {
+    res.status(404).json({ error: "No intake submission found for this client." });
+    return;
+  }
+
+  res.json(intake);
+});
+
 // ── Documents ─────────────────────────────────────────────────────────────────
 
 // GET /api/portal/admin/documents/:caseId

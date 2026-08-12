@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useLocation, useParams } from "wouter";
-import { ArrowLeft, Upload, Download, Send, FileText, AlertCircle } from "lucide-react";
+import { ArrowLeft, Upload, Download, Send, FileText, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
 import CaseNotes from "./CaseNotes";
 import { useAuth } from "@/lib/auth";
 
@@ -13,6 +13,16 @@ interface Case {
 }
 interface Doc { id: number; fileName: string; fileType: string; fileSize: number | null; objectPath: string; direction: string; createdAt: string; }
 interface Message { id: number; content: string; createdAt: string; senderId: number; senderName: string | null; senderRole: string | null; }
+interface Intake {
+  id: number; fullName: string; submissionDate: string; referredBy: string | null;
+  mailingAddress: string | null; phone: string; email: string;
+  preferredContact: string; bestTime: string | null; clientType: string;
+  services: string; otherServiceDescription: string | null;
+  engagementDetails: string; timeline: string; targetCompletionDate: string | null;
+  engagementStructure: string; budgetRange: string | null; budgetNotes: string | null;
+  acknowledged: boolean; electronicSignature: string; signatureDate: string;
+  status: string; internalNotes: string | null; createdAt: string;
+}
 
 const STATUSES = ["pending", "active", "on_hold", "closed"];
 function formatBytes(b: number | null) {
@@ -30,6 +40,8 @@ export default function AdminCaseDetail() {
   const [caseData, setCaseData] = useState<Case | null>(null);
   const [docs, setDocs] = useState<Doc[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [intake, setIntake] = useState<Intake | null>(null);
+  const [intakeOpen, setIntakeOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -51,10 +63,11 @@ export default function AdminCaseDetail() {
 
   const loadAll = async () => {
     try {
-      const [c, d, m] = await Promise.all([
+      const [c, d, m, intakeRes] = await Promise.all([
         fetch(`${BASE}/api/portal/admin/cases`, { credentials: "include" }).then(r => r.json()),
         fetch(`${BASE}/api/portal/admin/documents/${caseId}`, { credentials: "include" }).then(r => r.json()),
         fetch(`${BASE}/api/portal/admin/messages/${caseId}`, { credentials: "include" }).then(r => r.json()),
+        fetch(`${BASE}/api/portal/admin/cases/${caseId}/intake`, { credentials: "include" }).then(r => r.ok ? r.json() : null),
       ]);
       const found: Case = Array.isArray(c) ? c.find((x: Case) => x.id === caseId) : null;
       if (found) {
@@ -65,6 +78,7 @@ export default function AdminCaseDetail() {
       }
       setDocs(Array.isArray(d) ? d : []);
       setMessages(Array.isArray(m) ? m : []);
+      setIntake(intakeRes ?? null);
     } catch { setError("Failed to load case."); }
     finally { setLoading(false); }
   };
@@ -208,6 +222,99 @@ export default function AdminCaseDetail() {
           </div>
         </div>
 
+        {/* Intake Submission */}
+        {intake && (
+          <div className="border border-white/10 rounded-lg bg-white/2 overflow-hidden">
+            <button
+              onClick={() => setIntakeOpen(o => !o)}
+              className="w-full flex items-center justify-between px-8 py-5 text-left hover:bg-white/3 transition-colors"
+            >
+              <div>
+                <h2 className="font-serif text-xl text-foreground">Intake Submission</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Submitted {new Date(intake.createdAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+                  {intake.referredBy && ` · Referred by ${intake.referredBy}`}
+                </p>
+              </div>
+              {intakeOpen ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+            </button>
+
+            {intakeOpen && (
+              <div className="px-8 pb-8 space-y-8 border-t border-white/8 pt-6">
+
+                {/* Contact */}
+                <div>
+                  <p className="text-xs tracking-[0.15em] uppercase text-muted-foreground mb-4">Contact Information</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 text-sm">
+                    <IntakeField label="Full Name" value={intake.fullName} />
+                    <IntakeField label="Email" value={intake.email} />
+                    <IntakeField label="Phone" value={intake.phone} />
+                    <IntakeField label="Preferred Contact" value={intake.preferredContact} />
+                    {intake.bestTime && <IntakeField label="Best Time to Reach" value={intake.bestTime} />}
+                    {intake.mailingAddress && <IntakeField label="Mailing Address" value={intake.mailingAddress} />}
+                    {intake.referredBy && <IntakeField label="Referred By" value={intake.referredBy} />}
+                  </div>
+                </div>
+
+                {/* Engagement */}
+                <div>
+                  <p className="text-xs tracking-[0.15em] uppercase text-muted-foreground mb-4">Engagement Details</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 text-sm">
+                    <IntakeField label="Client Type" value={intake.clientType} />
+                    <IntakeField label="Engagement Structure" value={intake.engagementStructure} />
+                    <IntakeField label="Timeline" value={intake.timeline} />
+                    {intake.targetCompletionDate && (
+                      <IntakeField label="Target Completion" value={new Date(intake.targetCompletionDate).toLocaleDateString()} />
+                    )}
+                  </div>
+                  <div className="mt-3 space-y-3 text-sm">
+                    <IntakeField label="Services Requested" value={
+                      (() => {
+                        try { return JSON.parse(intake.services).join(", "); }
+                        catch { return intake.services; }
+                      })()
+                    } />
+                    {intake.otherServiceDescription && (
+                      <IntakeField label="Other Service Details" value={intake.otherServiceDescription} />
+                    )}
+                    <IntakeField label="Engagement Details" value={intake.engagementDetails} block />
+                  </div>
+                </div>
+
+                {/* Budget */}
+                {(intake.budgetRange || intake.budgetNotes) && (
+                  <div>
+                    <p className="text-xs tracking-[0.15em] uppercase text-muted-foreground mb-4">Budget</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 text-sm">
+                      {intake.budgetRange && <IntakeField label="Budget Range" value={intake.budgetRange} />}
+                      {intake.budgetNotes && <IntakeField label="Budget Notes" value={intake.budgetNotes} />}
+                    </div>
+                  </div>
+                )}
+
+                {/* Signature */}
+                <div>
+                  <p className="text-xs tracking-[0.15em] uppercase text-muted-foreground mb-4">Agreement</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 text-sm">
+                    <IntakeField label="Electronic Signature" value={intake.electronicSignature} />
+                    <IntakeField label="Signature Date" value={new Date(intake.signatureDate).toLocaleDateString()} />
+                    <IntakeField label="Acknowledged" value={intake.acknowledged ? "Yes" : "No"} />
+                    <IntakeField label="Submission Date" value={new Date(intake.submissionDate).toLocaleDateString()} />
+                  </div>
+                </div>
+
+                {/* Internal notes if present */}
+                {intake.internalNotes && (
+                  <div>
+                    <p className="text-xs tracking-[0.15em] uppercase text-muted-foreground mb-4">Internal Notes</p>
+                    <p className="text-sm text-foreground whitespace-pre-wrap">{intake.internalNotes}</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Documents */}
         <div>
           <div className="flex items-center justify-between mb-6">
@@ -292,6 +399,15 @@ export default function AdminCaseDetail() {
         {/* Create Case Section */}
         <CreateCaseSection clientId={caseData?.clientId ?? 0} onCreated={loadAll} />
       </div>
+    </div>
+  );
+}
+
+function IntakeField({ label, value, block }: { label: string; value: string; block?: boolean }) {
+  return (
+    <div className={block ? "md:col-span-2" : ""}>
+      <span className="text-muted-foreground">{label}: </span>
+      <span className="text-foreground">{value}</span>
     </div>
   );
 }
