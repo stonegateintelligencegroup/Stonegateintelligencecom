@@ -7,6 +7,7 @@ import { Route, Switch, Router as WouterRouter } from 'wouter';
 import Shell from '@/components/layout/Shell';
 import ScrollToTop from '@/components/ScrollToTop';
 import { AuthProvider, useAuth } from '@/lib/auth';
+import { CookieConsentProvider } from '@/context/CookieConsentContext';
 
 import Home from '@/pages/Home';
 import About from '@/pages/About';
@@ -118,12 +119,14 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-          <AuthProvider>
-            <Router />
-          </AuthProvider>
-        </WouterRouter>
-        <Toaster />
+        <CookieConsentProvider>
+          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+            <AuthProvider>
+              <Router />
+            </AuthProvider>
+          </WouterRouter>
+          <Toaster />
+        </CookieConsentProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );
