@@ -1,7 +1,9 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import { Plus, FileText, Trash2, ChevronDown, ChevronUp, AlertCircle, Check, X, Pencil } from "lucide-react";
+import { Plus, FileText, Trash2, ChevronDown, ChevronUp, AlertCircle, Check, X, Pencil, Users } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+interface NoteFolder { id: number; name: string; }
 
 interface CaseNote {
   id: number;
@@ -21,9 +23,11 @@ function fmt(iso: string) {
 
 export default function CaseNotes({ caseId }: { caseId: number; adminId: number }) {
   const [notes, setNotes] = useState<CaseNote[]>([]);
+  const [folders, setFolders] = useState<NoteFolder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [creating, setCreating] = useState(false);
+  const [sharingId, setSharingId] = useState<number | null>(null);
 
   // Which note is expanded for editing
   const [openId, setOpenId] = useState<number | null>(null);
@@ -42,15 +46,22 @@ export default function CaseNotes({ caseId }: { caseId: number; adminId: number 
 
   const load = useCallback(async () => {
     try {
-      const r = await fetch(`${BASE}/api/portal/admin/cases/${caseId}/case-notes`, { credentials: "include" });
-      const data = await r.json();
-      setNotes(Array.isArray(data) ? data : []);
+      const [notesRes, foldersRes] = await Promise.all([
+        fetch(`${BASE}/api/portal/admin/cases/${caseId}/case-notes`, { credentials: "include" }),
+        fetch(`${BASE}/api/portal/admin/cases/${caseId}/folders`, { credentials: "include" }),
+      ]);
+      const [notesData, foldersData] = await Promise.all([notesRes.json(), foldersRes.json()]);
+      setNotes(Array.isArray(notesData) ? notesData : []);
+      setFolders(Array.isArray(foldersData) ? foldersData : []);
     } catch {
       setError("Failed to load notes.");
     } finally {
       setLoading(false);
     }
   }, [caseId]);
+
+  // ID of the "Client Notes" folder for this case (null if not yet created)
+  const clientFolderId = folders.find(f => f.name === "Client Notes")?.id ?? null;
 
   useEffect(() => { load(); }, [load]);
 
@@ -146,6 +157,47 @@ export default function CaseNotes({ caseId }: { caseId: number; adminId: number 
     } catch { /* silent — optimistic update already applied */ }
   };
 
+  const handleShareToClient = async (note: CaseNote) => {
+    setSharingId(note.id);
+    setError("");
+    try {
+      // If already in Client Notes → remove (move to unfiled)
+      if (note.folderId === clientFolderId && clientFolderId !== null) {
+        await fetch(`${BASE}/api/portal/admin/case-notes/${note.id}`, {
+          method: "PATCH", credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ folderId: null }),
+        });
+        setNotes(prev => prev.map(n => n.id === note.id ? { ...n, folderId: null } : n));
+        return;
+      }
+      // Create "Client Notes" folder if it doesn't exist yet
+      let targetId = clientFolderId;
+      if (targetId === null) {
+        const r = await fetch(`${BASE}/api/portal/admin/cases/${caseId}/folders`, {
+          method: "POST", credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: "Client Notes" }),
+        });
+        if (!r.ok) { setError("Could not create Client Notes folder."); return; }
+        const folder: NoteFolder = await r.json();
+        setFolders(prev => [...prev, folder]);
+        targetId = folder.id;
+      }
+      // Move note into Client Notes folder
+      await fetch(`${BASE}/api/portal/admin/case-notes/${note.id}`, {
+        method: "PATCH", credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ folderId: targetId }),
+      });
+      setNotes(prev => prev.map(n => n.id === note.id ? { ...n, folderId: targetId } : n));
+    } catch {
+      setError("Network error.");
+    } finally {
+      setSharingId(null);
+    }
+  };
+
   const handleDelete = async (noteId: number) => {
     setDeleting(true);
     setError("");
@@ -209,6 +261,7 @@ export default function CaseNotes({ caseId }: { caseId: number; adminId: number 
           notes.map(note => {
             const isOpen = openId === note.id;
             const isConfirming = confirmId === note.id;
+            const isShared = clientFolderId !== null && note.folderId === clientFolderId;
 
             return (
               <div key={note.id} className="group">
@@ -242,20 +295,37 @@ export default function CaseNotes({ caseId }: { caseId: number; adminId: number 
                       onClick={e => e.stopPropagation()}
                     />
                   ) : (
-                    <button
-                      onClick={() => isOpen ? closeNote() : openNote(note)}
-                      className="flex-1 min-w-0 text-left"
-                    >
-                      <span className={`text-sm font-medium truncate block ${isOpen ? "text-primary underline" : "text-primary hover:underline"}`}>
-                        {note.title || "Untitled Note"}
-                      </span>
-                    </button>
+                    <div className="flex-1 min-w-0 flex items-center gap-2">
+                      <button
+                        onClick={() => isOpen ? closeNote() : openNote(note)}
+                        className="min-w-0 text-left"
+                      >
+                        <span className={`text-sm font-medium truncate block ${isOpen ? "text-primary underline" : "text-primary hover:underline"}`}>
+                          {note.title || "Untitled Note"}
+                        </span>
+                      </button>
+                      {isShared && (
+                        <span className="text-[9px] tracking-[0.1em] uppercase bg-primary/20 text-primary border border-primary/30 px-1.5 py-0.5 rounded shrink-0">
+                          Client
+                        </span>
+                      )}
+                    </div>
                   )}
 
                   <span className="text-xs text-muted-foreground/50 shrink-0 hidden md:inline">{fmt(note.updatedAt)}</span>
 
-                  {/* Rename + Delete actions */}
+                  {/* Rename + Share + Delete actions */}
                   <div className="flex items-center gap-1 shrink-0">
+                    {renamingId !== note.id && (
+                      <button
+                        onClick={e => { e.stopPropagation(); handleShareToClient(note); }}
+                        disabled={sharingId === note.id}
+                        className={`transition-colors disabled:opacity-30 ${isShared ? "text-primary" : "text-muted-foreground/30 hover:text-primary opacity-0 group-hover:opacity-100"}`}
+                        title={isShared ? "Remove from Client Notes" : "Save to Client Notes"}
+                      >
+                        <Users className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                     {renamingId !== note.id && (
                       <button
                         onClick={e => { e.stopPropagation(); startRename(note); }}

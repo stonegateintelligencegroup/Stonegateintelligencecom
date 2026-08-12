@@ -6,6 +6,8 @@ import {
   portalDocumentsTable,
   portalMessagesTable,
   portalUsersTable,
+  portalCaseNotesTable,
+  portalNoteFoldersTable,
 } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import { requireAuth } from "../../middlewares/auth";
@@ -320,6 +322,44 @@ router.post("/messages", async (req: Request, res: Response) => {
   } catch (err) {
     req.log.error({ err }, "Unexpected error sending message alert email");
   }
+});
+
+// GET /api/portal/client/notes — notes in the "Client Notes" folder for the authenticated client's case
+router.get("/notes", async (req: Request, res: Response) => {
+  // Find this client's case
+  const [clientCase] = await db
+    .select({ id: portalCasesTable.id })
+    .from(portalCasesTable)
+    .where(eq(portalCasesTable.portalUserId, req.session.userId!))
+    .limit(1);
+  if (!clientCase) { res.json([]); return; }
+
+  // Find the "Client Notes" folder
+  const [folder] = await db
+    .select({ id: portalNoteFoldersTable.id })
+    .from(portalNoteFoldersTable)
+    .where(
+      and(
+        eq(portalNoteFoldersTable.caseId, clientCase.id),
+        eq(portalNoteFoldersTable.name, "Client Notes")
+      )
+    )
+    .limit(1);
+  if (!folder) { res.json([]); return; }
+
+  // Return notes in that folder (title + content only — no internal metadata)
+  const notes = await db
+    .select({
+      id: portalCaseNotesTable.id,
+      title: portalCaseNotesTable.title,
+      content: portalCaseNotesTable.content,
+      updatedAt: portalCaseNotesTable.updatedAt,
+    })
+    .from(portalCaseNotesTable)
+    .where(eq(portalCaseNotesTable.folderId, folder.id))
+    .orderBy(desc(portalCaseNotesTable.updatedAt));
+
+  res.json(notes);
 });
 
 export default router;

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
-import { Briefcase, Clock, User, AlertCircle, LogOut } from "lucide-react";
+import { Briefcase, Clock, User, AlertCircle, LogOut, FileText } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -21,19 +21,27 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   closed:   { label: "Closed",   color: "text-muted-foreground bg-white/5 border-white/10" },
 };
 
+interface ClientNote { id: number; title: string; content: string; updatedAt: string; }
+
 export default function ClientDashboard() {
   const { user, logout } = useAuth();
   const [, setLocation] = useLocation();
   const [caseData, setCaseData] = useState<Case | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [clientNotes, setClientNotes] = useState<ClientNote[]>([]);
 
   useEffect(() => {
-    fetch(`${BASE}/api/portal/client/case`, { credentials: "include" })
-      .then(r => r.ok ? r.json() : Promise.reject(r.status))
-      .then(setCaseData)
-      .catch(e => { if (e !== 404) setError("Could not load case data."); })
-      .finally(() => setLoading(false));
+    Promise.all([
+      fetch(`${BASE}/api/portal/client/case`, { credentials: "include" })
+        .then(r => r.ok ? r.json() : Promise.reject(r.status))
+        .then(setCaseData)
+        .catch(e => { if (e !== 404) setError("Could not load case data."); }),
+      fetch(`${BASE}/api/portal/client/notes`, { credentials: "include" })
+        .then(r => r.ok ? r.json() : [])
+        .then(data => setClientNotes(Array.isArray(data) ? data : []))
+        .catch(() => {}),
+    ]).finally(() => setLoading(false));
   }, []);
 
   const handleLogout = async () => { await logout(); setLocation("/portal/login"); };
@@ -129,6 +137,30 @@ export default function ClientDashboard() {
                 <p className="text-xs text-muted-foreground">Communicate directly with your investigative team</p>
               </button>
             </div>
+
+            {/* Notes from Investigator */}
+            {clientNotes.length > 0 && (
+              <div className="border border-white/10 rounded-lg bg-white/2 overflow-hidden">
+                <div className="px-8 py-5 border-b border-white/8 flex items-center gap-3">
+                  <FileText className="w-4 h-4 text-primary" />
+                  <h2 className="font-serif text-xl text-foreground">Notes from Investigator</h2>
+                  <span className="text-xs text-muted-foreground">({clientNotes.length})</span>
+                </div>
+                <div className="divide-y divide-white/5">
+                  {clientNotes.map(note => (
+                    <div key={note.id} className="px-8 py-5">
+                      <p className="text-sm font-medium text-foreground mb-2">{note.title || "Note"}</p>
+                      {note.content && (
+                        <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">{note.content}</p>
+                      )}
+                      <p className="text-xs text-muted-foreground/50 mt-3">
+                        {new Date(note.updatedAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
