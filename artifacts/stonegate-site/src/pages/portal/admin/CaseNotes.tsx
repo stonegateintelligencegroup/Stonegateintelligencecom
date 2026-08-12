@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback } from "react";
-import { Plus, FileText, Trash2, ChevronDown, ChevronUp, AlertCircle, Check, X } from "lucide-react";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { Plus, FileText, Trash2, ChevronDown, ChevronUp, AlertCircle, Check, X, Pencil } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -35,6 +35,10 @@ export default function CaseNotes({ caseId }: { caseId: number; adminId: number 
   // Inline delete confirm
   const [confirmId, setConfirmId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
+  // Inline rename
+  const [renamingId, setRenamingId] = useState<number | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const renameInputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     try {
@@ -118,6 +122,30 @@ export default function CaseNotes({ caseId }: { caseId: number; adminId: number 
     }
   };
 
+  const startRename = (note: CaseNote) => {
+    setRenamingId(note.id);
+    setRenameValue(note.title || "");
+    setConfirmId(null);
+    setTimeout(() => renameInputRef.current?.select(), 30);
+  };
+
+  const commitRename = async () => {
+    if (renamingId === null) return;
+    const trimmed = renameValue.trim() || "Untitled Note";
+    setNotes(prev => prev.map(n => n.id === renamingId ? { ...n, title: trimmed } : n));
+    // If this note is open in the editor, sync the edit buffer too
+    if (openId === renamingId) setEditTitle(trimmed);
+    setRenamingId(null);
+    try {
+      await fetch(`${BASE}/api/portal/admin/case-notes/${renamingId}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: trimmed }),
+      });
+    } catch { /* silent — optimistic update already applied */ }
+  };
+
   const handleDelete = async (noteId: number) => {
     setDeleting(true);
     setError("");
@@ -186,23 +214,57 @@ export default function CaseNotes({ caseId }: { caseId: number; adminId: number 
               <div key={note.id} className="group">
                 {/* Note row header */}
                 <div className={`flex items-center gap-3 px-6 py-3 transition-colors ${isOpen ? "bg-white/3" : "hover:bg-white/2"}`}>
-                  {/* Toggle open/close */}
+                  {/* Chevron toggle */}
                   <button
                     onClick={() => isOpen ? closeNote() : openNote(note)}
-                    className="flex items-center gap-3 flex-1 min-w-0 text-left"
+                    className="shrink-0 p-1"
+                    aria-label={isOpen ? "Collapse" : "Expand"}
                   >
                     {isOpen
-                      ? <ChevronUp className="w-3.5 h-3.5 text-primary shrink-0" />
-                      : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                      ? <ChevronUp className="w-3.5 h-3.5 text-primary" />
+                      : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
                     }
-                    <span className={`text-sm font-medium truncate ${isOpen ? "text-primary underline" : "text-primary hover:underline"}`}>
-                      {note.title || "Untitled Note"}
-                    </span>
-                    <span className="text-xs text-muted-foreground/50 shrink-0 hidden md:inline">{fmt(note.updatedAt)}</span>
                   </button>
 
-                  {/* Delete actions */}
-                  <div className="flex items-center gap-2 shrink-0">
+                  {/* Title — inline rename input OR plain text */}
+                  {renamingId === note.id ? (
+                    <input
+                      ref={renameInputRef}
+                      type="text"
+                      value={renameValue}
+                      onChange={e => setRenameValue(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === "Enter") commitRename();
+                        if (e.key === "Escape") setRenamingId(null);
+                      }}
+                      onBlur={commitRename}
+                      className="flex-1 min-w-0 bg-black/60 border border-primary/40 rounded px-2 py-0.5 text-sm font-medium text-foreground outline-none"
+                      onClick={e => e.stopPropagation()}
+                    />
+                  ) : (
+                    <button
+                      onClick={() => isOpen ? closeNote() : openNote(note)}
+                      className="flex-1 min-w-0 text-left"
+                    >
+                      <span className={`text-sm font-medium truncate block ${isOpen ? "text-primary underline" : "text-primary hover:underline"}`}>
+                        {note.title || "Untitled Note"}
+                      </span>
+                    </button>
+                  )}
+
+                  <span className="text-xs text-muted-foreground/50 shrink-0 hidden md:inline">{fmt(note.updatedAt)}</span>
+
+                  {/* Rename + Delete actions */}
+                  <div className="flex items-center gap-1 shrink-0">
+                    {renamingId !== note.id && (
+                      <button
+                        onClick={e => { e.stopPropagation(); startRename(note); }}
+                        className="text-muted-foreground/30 hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
+                        title="Rename note"
+                      >
+                        <Pencil className="w-3 h-3" />
+                      </button>
+                    )}
                     {isConfirming ? (
                       <>
                         <button
