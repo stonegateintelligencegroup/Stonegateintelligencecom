@@ -199,9 +199,9 @@ export default function AdminClientDetail() {
               </button>
               <button
                 onClick={() => {
-                  const name = encodeURIComponent(client.name);
-                  const bid = billing?.billingClientId;
-                  setLocation(`/portal/admin/billing/time${bid ? `?clientId=${bid}` : ""}&from=client&fromId=${clientId}&fromName=${name}`.replace("?&", "?"));
+                  const q = new URLSearchParams({ from: "client", fromId: String(clientId), fromName: client.name });
+                  if (billing?.billingClientId) q.set("clientId", String(billing.billingClientId));
+                  setLocation(`/portal/admin/billing/time?${q}`);
                 }}
                 className="flex items-center gap-2 text-muted-foreground hover:text-primary border border-white/10 hover:border-primary/30 text-xs tracking-[0.12em] uppercase px-5 py-2.5 rounded transition-colors"
               >

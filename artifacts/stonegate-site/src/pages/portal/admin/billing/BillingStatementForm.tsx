@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation, useRoute } from "wouter";
-import { Plus, Trash2, ChevronUp, ChevronDown, Eye } from "lucide-react";
+import { Plus, Trash2, ChevronUp, ChevronDown, ExternalLink } from "lucide-react";
 import BillingLayout from "./BillingLayout";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -130,15 +130,20 @@ export default function BillingStatementForm() {
     const eid = engagementOverride ?? entryEngagementId;
     setLoadingEntries(true);
     setEntriesLoaded(true);
-    const params = new URLSearchParams();
-    if (cid) params.set("clientId", cid);
-    if (eid) params.set("engagementId", eid);
-    const url = editId
-      ? `${BASE}/api/portal/billing/statements/${editId}/available-time-entries?${params}`
-      : `${BASE}/api/portal/billing/time-entries?${params}&billingStatus=unbilled`;
-    const res = await fetch(url, { credentials: "include" }).then(r => r.json());
-    setAvailableEntries(Array.isArray(res) ? res : []);
-    setLoadingEntries(false);
+    try {
+      const params = new URLSearchParams();
+      if (cid) params.set("clientId", cid);
+      if (eid) params.set("engagementId", eid);
+      const url = editId
+        ? `${BASE}/api/portal/billing/statements/${editId}/available-time-entries?${params}`
+        : `${BASE}/api/portal/billing/time-entries?${params}&billingStatus=unbilled`;
+      const res = await fetch(url, { credentials: "include" }).then(r => r.json());
+      setAvailableEntries(Array.isArray(res) ? res : []);
+    } catch {
+      setAvailableEntries([]);
+    } finally {
+      setLoadingEntries(false);
+    }
   };
 
   // Import selected time entries as line items
@@ -552,6 +557,7 @@ export default function BillingStatementForm() {
                     <th className="px-4 py-3 text-left text-muted-foreground font-normal">Description</th>
                     <th className="px-4 py-3 text-right text-muted-foreground font-normal">Hours</th>
                     <th className="px-4 py-3 text-right text-muted-foreground font-normal">Amount</th>
+                    <th className="px-4 py-3 w-8" />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
@@ -567,6 +573,16 @@ export default function BillingStatementForm() {
                       <td className="px-4 py-3 text-muted-foreground max-w-xs truncate">{e.description ?? "—"}</td>
                       <td className="px-4 py-3 text-right text-foreground">{parseFloat(e.billedHours).toFixed(2)}</td>
                       <td className="px-4 py-3 text-right text-foreground">{e.billableAmount ? fmt(e.billableAmount) : "—"}</td>
+                      <td className="px-4 py-3">
+                        <button
+                          type="button"
+                          title="View in Time Entries"
+                          onClick={() => setLocation(`/portal/admin/billing/time${entryClientId ? `?clientId=${entryClientId}` : ""}`)}
+                          className="text-muted-foreground/40 hover:text-primary transition-colors"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
