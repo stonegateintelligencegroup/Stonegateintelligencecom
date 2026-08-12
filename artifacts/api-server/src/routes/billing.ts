@@ -1032,6 +1032,17 @@ router.post("/statements/:id/items", async (req: Request, res: Response) => {
     })
     .returning();
 
+  // Mark linked time entries as ready_to_invoice so they show as attached
+  if (Array.isArray(timeEntryIds) && timeEntryIds.length > 0) {
+    await db
+      .update(timeEntriesTable)
+      .set({ billingStatus: "ready_to_invoice", updatedAt: new Date() })
+      .where(and(
+        inArray(timeEntriesTable.id, timeEntryIds.map(Number)),
+        eq(timeEntriesTable.billingStatus, "unbilled"),
+      ));
+  }
+
   // Recompute current charges from all items
   await recalcStatementCharges(statementId);
   res.status(201).json(item);
@@ -1089,14 +1100,19 @@ async function recalcStatementCharges(statementId: number) {
 
 // GET /api/portal/billing/statements/:id/available-time-entries
 // Returns unbilled time entries for the statement's client/engagement (admin only, never exposed to client)
+// Accepts optional ?clientId= and ?engagementId= query params to override the statement's own values
 router.get("/statements/:id/available-time-entries", async (req: Request, res: Response) => {
   const id = Number(req.params.id);
   const [stmt] = await db.select().from(billingStatementsTable).where(eq(billingStatementsTable.id, id)).limit(1);
   if (!stmt) { res.status(404).json({ error: "Not found." }); return; }
 
+  // Query params override the statement's own client/engagement (so the tab filter works)
+  const clientId = req.query.clientId ? Number(req.query.clientId) : stmt.billingClientId;
+  const engId = req.query.engagementId ? Number(req.query.engagementId) : stmt.engagementId;
+
   const conditions: ReturnType<typeof eq>[] = [eq(timeEntriesTable.billingStatus, "unbilled")];
-  if (stmt.billingClientId) conditions.push(eq(timeEntriesTable.clientId, stmt.billingClientId));
-  if (stmt.engagementId) conditions.push(eq(timeEntriesTable.engagementId, stmt.engagementId as any));
+  if (clientId) conditions.push(eq(timeEntriesTable.clientId, clientId));
+  if (engId) conditions.push(eq(timeEntriesTable.engagementId, engId as any));
 
   const entries = await db
     .select({ entry: timeEntriesTable, engagementName: billingEngagementsTable.name })

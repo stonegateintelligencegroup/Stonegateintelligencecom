@@ -47,7 +47,11 @@ export default function BillingStatementForm() {
   const [portalUsers, setPortalUsers] = useState<PortalUser[]>([]);
   const [availableEntries, setAvailableEntries] = useState<TimeEntry[]>([]);
   const [loadingEntries, setLoadingEntries] = useState(false);
+  const [entriesLoaded, setEntriesLoaded] = useState(false);
   const [selectedEntries, setSelectedEntries] = useState<Set<number>>(new Set());
+  // Separate filter state for the Time Entries tab (independent from the Details selectors)
+  const [entryClientId, setEntryClientId] = useState("");
+  const [entryEngagementId, setEntryEngagementId] = useState("");
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<"details" | "items" | "entries">("details");
 
@@ -118,18 +122,18 @@ export default function BillingStatementForm() {
     }
   }, [billingClientId, clients]);
 
-  // Load available time entries when client/engagement set
-  const loadEntries = async () => {
-    if (!editId && !billingClientId) return;
+  // Load available time entries using the tab's own client/engagement filters
+  const loadEntries = async (clientOverride?: string, engagementOverride?: string) => {
+    const cid = clientOverride ?? entryClientId;
+    const eid = engagementOverride ?? entryEngagementId;
     setLoadingEntries(true);
-    const id = editId ?? "new";
+    setEntriesLoaded(true);
     const params = new URLSearchParams();
-    if (billingClientId) params.set("clientId", billingClientId);
-    if (engagementId) params.set("engagementId", engagementId);
-    // Use the available-time-entries endpoint if editing, else use time-entries with filters
+    if (cid) params.set("clientId", cid);
+    if (eid) params.set("engagementId", eid);
     const url = editId
-      ? `${BASE}/api/portal/billing/statements/${editId}/available-time-entries`
-      : `${BASE}/api/portal/billing/time-entries?${params}&billingStatus=unbilled&billable=true`;
+      ? `${BASE}/api/portal/billing/statements/${editId}/available-time-entries?${params}`
+      : `${BASE}/api/portal/billing/time-entries?${params}&billingStatus=unbilled`;
     const res = await fetch(url, { credentials: "include" }).then(r => r.json());
     setAvailableEntries(Array.isArray(res) ? res : []);
     setLoadingEntries(false);
@@ -280,7 +284,17 @@ export default function BillingStatementForm() {
       {/* Tabs */}
       <div className="flex gap-1 mb-6 border-b border-white/8">
         {(["details", "items", "entries"] as const).map(t => (
-          <button key={t} onClick={() => { setActiveTab(t); if (t === "entries") loadEntries(); }}
+          <button key={t} onClick={() => {
+            setActiveTab(t);
+            if (t === "entries" && !entriesLoaded) {
+              // Pre-fill filters from the Details tab when first opening
+              const cid = entryClientId || billingClientId;
+              const eid = entryEngagementId || engagementId;
+              setEntryClientId(cid);
+              setEntryEngagementId(eid);
+              loadEntries(cid, eid);
+            }
+          }}
             className={`px-5 py-2.5 text-xs tracking-[0.1em] uppercase border-b-2 transition-colors ${activeTab === t ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
             {t === "entries" ? "Time Entries" : t === "items" ? `Line Items (${items.length})` : t}
           </button>
@@ -449,23 +463,61 @@ export default function BillingStatementForm() {
       {/* ── Time entries tab ── */}
       {activeTab === "entries" && (
         <div className="max-w-4xl">
-          <div className="mb-4 flex items-center justify-between">
-            <p className="text-xs text-muted-foreground">
-              Select unbilled time entries to import as line items. <strong>Investigator names and internal details are never exposed to clients.</strong>
-            </p>
+          {/* Filter row */}
+          <div className="flex flex-wrap items-end gap-3 mb-5 p-4 bg-white/2 border border-white/8 rounded-lg">
+            <div className="flex-1 min-w-[180px]">
+              <label className={label}>Filter by Client</label>
+              <select
+                value={entryClientId}
+                onChange={e => { setEntryClientId(e.target.value); setEntryEngagementId(""); }}
+                className={inp}
+              >
+                <option value="">All clients</option>
+                {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+            <div className="flex-1 min-w-[180px]">
+              <label className={label}>Filter by Engagement</label>
+              <select
+                value={entryEngagementId}
+                onChange={e => setEntryEngagementId(e.target.value)}
+                className={inp}
+              >
+                <option value="">All engagements</option>
+                {(entryClientId
+                  ? engagements.filter(e => e.clientId === Number(entryClientId))
+                  : engagements
+                ).map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+              </select>
+            </div>
+            <button
+              onClick={() => loadEntries()}
+              disabled={loadingEntries}
+              className="flex items-center gap-1.5 text-xs border border-white/15 hover:border-primary/40 text-muted-foreground hover:text-primary transition-colors px-4 py-2.5 rounded disabled:opacity-50"
+            >
+              {loadingEntries ? "Loading…" : "Load Entries"}
+            </button>
             {selectedEntries.size > 0 && (
               <button onClick={importEntries}
-                className="flex items-center gap-1.5 text-xs bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded transition-colors">
+                className="flex items-center gap-1.5 text-xs bg-primary hover:bg-primary/90 text-white px-4 py-2.5 rounded transition-colors">
                 <Plus className="w-3 h-3" /> Import {selectedEntries.size} selected
               </button>
             )}
           </div>
 
-          {loadingEntries ? (
+          <p className="text-xs text-muted-foreground mb-4">
+            Select unbilled time entries to import as line items. <strong>Investigator names and internal details are never exposed to clients.</strong>
+          </p>
+
+          {!entriesLoaded ? (
+            <div className="border border-white/10 rounded-lg p-8 text-center text-muted-foreground text-sm">
+              Select a client above and click <strong>Load Entries</strong> to see available time entries.
+            </div>
+          ) : loadingEntries ? (
             <p className="text-sm text-muted-foreground">Loading…</p>
           ) : availableEntries.length === 0 ? (
             <div className="border border-white/10 rounded-lg p-8 text-center text-muted-foreground text-sm">
-              No unbilled time entries found for the selected client / engagement.
+              No unbilled time entries found{entryClientId ? " for the selected client" : ""}. Try selecting a different client or changing the engagement filter.
             </div>
           ) : (
             <div className="border border-white/10 rounded-lg overflow-hidden">
