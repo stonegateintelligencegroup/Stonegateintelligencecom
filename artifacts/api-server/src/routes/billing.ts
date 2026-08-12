@@ -152,9 +152,28 @@ router.patch("/clients/:id", async (req: Request, res: Response) => {
 // DELETE /api/portal/billing/clients/:id
 router.delete("/clients/:id", async (req: Request, res: Response) => {
   const id = Number(req.params.id);
+  const [before] = await db.select().from(billingClientsTable).where(eq(billingClientsTable.id, id)).limit(1);
+  if (!before) { res.status(404).json({ error: "Client not found." }); return; }
+
+  // Cascade: delete child records in FK order before removing the client
+  // 1. Statement items linked to statements for this client
+  const statements = await db.select({ id: billingStatementsTable.id })
+    .from(billingStatementsTable).where(eq(billingStatementsTable.billingClientId, id));
+  if (statements.length > 0) {
+    const statementIds = statements.map(s => s.id);
+    await db.delete(billingStatementItemsTable).where(inArray(billingStatementItemsTable.statementId, statementIds));
+    await db.delete(billingStatementsTable).where(inArray(billingStatementsTable.id, statementIds));
+  }
+  // 2. Invoices
+  await db.delete(invoicesTable).where(eq(invoicesTable.clientId, id));
+  // 3. Time entries
+  await db.delete(timeEntriesTable).where(eq(timeEntriesTable.clientId, id));
+  // 4. Engagements
+  await db.delete(billingEngagementsTable).where(eq(billingEngagementsTable.clientId, id));
+  // 5. The client itself
   const [deleted] = await db.delete(billingClientsTable).where(eq(billingClientsTable.id, id)).returning();
-  if (!deleted) { res.status(404).json({ error: "Client not found." }); return; }
-  await writeAudit(req, "delete", "billing_client", id, deleted, null);
+
+  await writeAudit(req, "delete", "billing_client", id, before, null);
   res.json({ deleted: true });
 });
 

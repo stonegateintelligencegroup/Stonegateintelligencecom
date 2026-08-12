@@ -71,6 +71,15 @@ router.post("/clients", async (req: Request, res: Response) => {
     })
     .returning();
 
+  // Auto-create a linked billing client so Monica can log hours immediately
+  await db.insert(billingClientsTable).values({
+    name,
+    email: email.toLowerCase().trim(),
+    billingEmail: email.toLowerCase().trim(),
+    linkedPortalUserId: newUser.id,
+    paymentTerms: "30",
+  });
+
   const domain = process.env.REPLIT_DEV_DOMAIN
     ? `https://${process.env.REPLIT_DEV_DOMAIN}`
     : "https://stonegateintelligence.com";
