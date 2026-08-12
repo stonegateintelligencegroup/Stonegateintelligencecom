@@ -56,7 +56,7 @@ function buildNotificationEmail(sub: {
   const clientTypeLabel: Record<string, string> = {
     individual: "Individual",
     attorney: "Attorney / Law Firm",
-    business: "Business / Corporation",
+    business: "Company",
   };
 
   const timelineLabel: Record<string, string> = {

@@ -69,7 +69,17 @@ const BUDGET_OPTIONS = [
 ];
 
 const CLIENT_LABELS: Record<string, string> = {
-  individual: "Individual", attorney: "Attorney / Law Firm", business: "Business / Corporation",
+  individual: "Individual", attorney: "Attorney / Law Firm", business: "Company",
+};
+
+const CLIENT_ICONS: Record<string, string> = {
+  individual: "👤", attorney: "⚖️", business: "🏢",
+};
+
+const CLIENT_DESCRIPTIONS: Record<string, string> = {
+  individual: "Private individual seeking personal investigative or research services",
+  attorney: "Law firm or attorney seeking litigation support, due diligence, or investigative assistance",
+  business: "Corporation, LLC, or other business entity seeking intelligence or investigative services",
 };
 const TIMELINE_LABELS: Record<string, string> = {
   urgent: "Urgent — within 48 hours", standard: "Standard — 1–2 weeks", flexible: "Flexible / no set deadline",
@@ -285,8 +295,45 @@ export default function Intake() {
 
         {/* ── Step 1: Client Information ──────────────────────────────────────── */}
         {step === 1 && (
-          <div className="space-y-6">
+          <div className="space-y-8">
             <SectionTitle>Section 1 — Client Information</SectionTitle>
+
+            {/* Client type — prominent card selection, asked first */}
+            <div>
+              <p className="text-xs tracking-[0.15em] uppercase text-muted-foreground mb-1">
+                I am contacting Stonegate as a… <span className="text-primary">*</span>
+              </p>
+              <p className="text-xs text-muted-foreground/50 mb-4">Select the option that best describes you.</p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {(["individual", "attorney", "business"] as const).map(v => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => up({ clientType: v })}
+                    className={`relative text-left p-5 rounded-lg border-2 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary/40 ${
+                      data.clientType === v
+                        ? "border-primary bg-primary/8 shadow-[0_0_0_1px_rgba(192,57,43,0.15)]"
+                        : "border-white/10 bg-white/2 hover:border-white/25 hover:bg-white/4"
+                    }`}
+                  >
+                    {data.clientType === v && (
+                      <div className="absolute top-3 right-3 w-4 h-4 rounded-full bg-primary flex items-center justify-center">
+                        <Check className="w-2.5 h-2.5 text-white" />
+                      </div>
+                    )}
+                    <span className="block text-xl mb-2">{CLIENT_ICONS[v]}</span>
+                    <span className="block text-sm font-medium text-foreground mb-1.5">{CLIENT_LABELS[v]}</span>
+                    <span className="block text-xs text-muted-foreground/60 leading-relaxed">{CLIENT_DESCRIPTIONS[v]}</span>
+                  </button>
+                ))}
+              </div>
+              {err("clientType") && (
+                <p className="text-xs text-red-400 mt-2 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />{err("clientType")}
+                </p>
+              )}
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="md:col-span-2">
                 <Field label="Full Name / Company Name" required error={err("fullName")}>
@@ -330,22 +377,6 @@ export default function Intake() {
                 <input value={data.bestTime} onChange={e => up({ bestTime: e.target.value })}
                   className={inputCls} placeholder="e.g., Weekdays 9am–5pm" />
               </Field>
-              <div className="md:col-span-2">
-                <Field label="Client Type" required error={err("clientType")}>
-                  <div className="space-y-3 mt-1">
-                    {(["individual","attorney","business"] as const).map(v => (
-                      <label key={v} className="flex items-center gap-3 cursor-pointer group">
-                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${data.clientType === v ? "border-primary bg-primary/20" : "border-white/20 group-hover:border-white/40"}`}>
-                          {data.clientType === v && <div className="w-2 h-2 rounded-full bg-primary" />}
-                        </div>
-                        <input type="radio" className="sr-only" value={v} checked={data.clientType === v} onChange={() => up({ clientType: v })} />
-                        <span className="text-sm text-foreground">{CLIENT_LABELS[v]}</span>
-                      </label>
-                    ))}
-                  </div>
-                  {err("clientType") && <p className="text-xs text-red-400 mt-2 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{err("clientType")}</p>}
-                </Field>
-              </div>
             </div>
           </div>
         )}
