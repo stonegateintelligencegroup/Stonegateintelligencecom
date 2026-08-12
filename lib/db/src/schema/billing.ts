@@ -6,6 +6,7 @@ import {
   timestamp,
   boolean,
   numeric,
+  date,
 } from "drizzle-orm/pg-core";
 
 // ── Billing Clients ───────────────────────────────────────────────────────────
@@ -57,6 +58,7 @@ export const billingEngagementsTable = pgTable("billing_engagements", {
   status: text("status").notNull().default("open"),
   // "open" | "on_hold" | "completed" | "closed"
   notes: text("notes"),
+  linkedPortalCaseId: integer("linked_portal_case_id"), // optional FK to portal_cases.id
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -167,4 +169,56 @@ export const billingAuditLogTable = pgTable("billing_audit_log", {
 });
 
 export type BillingAuditLog = typeof billingAuditLogTable.$inferSelect;
+
+// ── Billing Statements ────────────────────────────────────────────────────────
+// Client-facing billing summaries. Admin creates from internal time entries.
+// portalUserId is the FK used to enforce client-side access control.
+
+export const billingStatementsTable = pgTable("billing_statements", {
+  id: serial("id").primaryKey(),
+  statementNumber: text("statement_number").notNull(),
+  billingClientId: integer("billing_client_id"),          // billing_clients.id
+  engagementId: integer("engagement_id"),                 // billing_engagements.id
+  portalUserId: integer("portal_user_id"),                // portal_users.id — ownership key
+  billingPeriod: text("billing_period").notNull(),        // "July 2026"
+  billingPeriodStart: date("billing_period_start"),
+  billingPeriodEnd: date("billing_period_end"),
+  statementDate: date("statement_date").notNull(),
+  dueDate: date("due_date"),
+  previousBalance: numeric("previous_balance", { precision: 12, scale: 2 }).notNull().default("0"),
+  currentCharges: numeric("current_charges", { precision: 12, scale: 2 }).notNull().default("0"),
+  paymentsCredits: numeric("payments_credits", { precision: 12, scale: 2 }).notNull().default("0"),
+  amountDue: numeric("amount_due", { precision: 12, scale: 2 }).notNull().default("0"),
+  retainerApplied: numeric("retainer_applied", { precision: 12, scale: 2 }).notNull().default("0"),
+  remainingRetainer: numeric("remaining_retainer", { precision: 12, scale: 2 }).notNull().default("0"),
+  status: text("status").notNull().default("draft"),
+  // "draft" | "published" | "paid" | "partially_paid" | "overdue" | "void"
+  adminNotes: text("admin_notes"),                        // internal only, never sent to client
+  publishedAt: timestamp("published_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type BillingStatement = typeof billingStatementsTable.$inferSelect;
+export type InsertBillingStatement = typeof billingStatementsTable.$inferInsert;
+
+// ── Billing Statement Items ───────────────────────────────────────────────────
+
+export const billingStatementItemsTable = pgTable("billing_statement_items", {
+  id: serial("id").primaryKey(),
+  statementId: integer("statement_id").notNull().references(() => billingStatementsTable.id, { onDelete: "cascade" }),
+  description: text("description").notNull(),
+  servicePeriod: text("service_period"),
+  quantity: numeric("quantity", { precision: 10, scale: 2 }),       // hours / units
+  rate: numeric("rate", { precision: 12, scale: 2 }),               // $/hr or unit rate
+  amount: numeric("amount", { precision: 12, scale: 2 }).notNull().default("0"),
+  showQuantity: boolean("show_quantity").notNull().default(true),
+  showRate: boolean("show_rate").notNull().default(true),
+  sortOrder: integer("sort_order").notNull().default(0),
+  timeEntryIds: text("time_entry_ids").default("[]"),                // JSON array — internal only
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type BillingStatementItem = typeof billingStatementItemsTable.$inferSelect;
+export type InsertBillingStatementItem = typeof billingStatementItemsTable.$inferInsert;
 export type InsertBillingAuditLog = typeof billingAuditLogTable.$inferInsert;

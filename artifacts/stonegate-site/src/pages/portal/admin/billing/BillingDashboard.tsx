@@ -10,11 +10,15 @@ interface Summary {
   totalHours: number; billableHours: number; nonBillableHours: number;
   billableAmount: number; unbilledAmount: number; invoicedAmount: number;
 }
-interface Client { id: number; name: string; }
-interface Engagement { id: number; name: string; clientId: number; }
+interface Client { id: number; name: string; defaultRate: string | null; linkedPortalUserId: number | null; }
+interface Engagement { id: number; name: string; clientId: number; hourlyRate: string | null; linkedPortalCaseId: number | null; }
 
 function fmt(n: number) { return `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`; }
 function fmtH(n: number) { return n.toFixed(2) + "h"; }
+
+function getSearchParams() {
+  return new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
+}
 
 export default function BillingDashboard() {
   const [, setLocation] = useLocation();
@@ -24,12 +28,15 @@ export default function BillingDashboard() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
 
-  // Filters
+  // Read initial filter state from URL params
+  const urlParams = getSearchParams();
+  const initClientId = urlParams.get("clientId") ?? "";
+
   const today = new Date().toISOString().split("T")[0];
   const firstOfMonth = today.slice(0, 7) + "-01";
   const [dateFrom, setDateFrom] = useState(firstOfMonth);
   const [dateTo, setDateTo] = useState(today);
-  const [clientId, setClientId] = useState("");
+  const [clientId, setClientId] = useState(initClientId);
   const [engagementId, setEngagementId] = useState("");
 
   const loadSummary = async () => {
@@ -55,17 +62,25 @@ export default function BillingDashboard() {
   useEffect(() => { loadSummary(); }, [dateFrom, dateTo, clientId, engagementId]);
 
   const cards = summary ? [
-    { label: "Total Hours",      value: fmtH(summary.totalHours),      sub: null },
-    { label: "Billable Hours",   value: fmtH(summary.billableHours),   sub: null },
-    { label: "Non-Billable",     value: fmtH(summary.nonBillableHours),sub: null },
-    { label: "Billable Amount",  value: fmt(summary.billableAmount),    sub: null, accent: true },
-    { label: "Unbilled",         value: fmt(summary.unbilledAmount),    sub: null },
-    { label: "Invoiced",         value: fmt(summary.invoicedAmount),    sub: null },
+    { label: "Total Hours",      value: fmtH(summary.totalHours) },
+    { label: "Billable Hours",   value: fmtH(summary.billableHours) },
+    { label: "Non-Billable",     value: fmtH(summary.nonBillableHours) },
+    { label: "Billable Amount",  value: fmt(summary.billableAmount), accent: true },
+    { label: "Unbilled",         value: fmt(summary.unbilledAmount) },
+    { label: "Invoiced",         value: fmt(summary.invoicedAmount) },
   ] : [];
 
   const filteredEngagements = clientId
     ? engagements.filter(e => e.clientId === Number(clientId))
     : engagements;
+
+  // Context-aware navigation to Time Entries tab
+  const toTimeEntries = () => {
+    const p = new URLSearchParams(getSearchParams());
+    if (clientId) p.set("clientId", clientId);
+    if (engagementId) p.set("engagementId", engagementId);
+    setLocation(`/portal/admin/billing/time?${p}`);
+  };
 
   return (
     <BillingLayout>
@@ -122,11 +137,12 @@ export default function BillingDashboard() {
       {/* Quick links */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
-          { label: "Manage Clients", desc: "Add and edit billing clients", href: "/portal/admin/billing/clients" },
-          { label: "Engagements", desc: "Track cases and retainers", href: "/portal/admin/billing/engagements" },
-          { label: "Time Entries", desc: "View and export time records", href: "/portal/admin/billing/time" },
+          { label: "Manage Clients", desc: "Add and edit billing clients", path: "/portal/admin/billing/clients" },
+          { label: "Engagements", desc: "Track cases and retainers", path: "/portal/admin/billing/engagements" },
+          { label: "Time Entries", desc: "View and export time records", onClick: toTimeEntries },
         ].map(l => (
-          <button key={l.href} onClick={() => setLocation(l.href)}
+          <button key={l.label}
+            onClick={l.onClick ?? (() => setLocation(l.path!))}
             className="border border-white/10 hover:border-primary/30 rounded-lg p-6 text-left transition-colors group bg-white/2">
             <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors mb-1">{l.label}</p>
             <p className="text-xs text-muted-foreground">{l.desc}</p>

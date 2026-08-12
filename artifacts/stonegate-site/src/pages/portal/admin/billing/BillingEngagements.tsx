@@ -10,9 +10,10 @@ interface Engagement {
   targetCompletion: string | null; assignedInvestigator: string | null;
   billingStructure: string; hourlyRate: string | null; retainerAmount: string | null;
   retainerStartDate: string | null; budget: string | null; status: string;
-  notes: string | null; billedAmount: number;
+  notes: string | null; billedAmount: number; linkedPortalCaseId: number | null;
 }
 interface Client { id: number; name: string; defaultRate: string | null; }
+interface PortalCase { id: number; caseNumber: string; clientId: number; clientName: string | null; }
 
 const CASE_TYPES = [
   "Investigative Services","Intelligence Consulting","Due Diligence","Risk Assessment",
@@ -31,6 +32,7 @@ const EMPTY_FORM = {
   dateOpened: new Date().toISOString().split("T")[0], targetCompletion: "",
   assignedInvestigator: "", billingStructure: "hourly",
   hourlyRate: "", retainerAmount: "", retainerStartDate: "", budget: "", status: "open", notes: "",
+  linkedPortalCaseId: "",
 };
 
 function BudgetBar({ used, budget, retainer, retainerWarningPct }: {
@@ -72,6 +74,7 @@ function BudgetBar({ used, budget, retainer, retainerWarningPct }: {
 export default function BillingEngagements() {
   const [engagements, setEngagements] = useState<Engagement[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
+  const [portalCases, setPortalCases] = useState<PortalCase[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterClient, setFilterClient] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
@@ -83,14 +86,19 @@ export default function BillingEngagements() {
   const [retainerWarningPct, setRetainerWarningPct] = useState(20);
 
   const load = async () => {
-    const [e, c, s] = await Promise.all([
+    const [e, c, s, pc] = await Promise.all([
       fetch(`${BASE}/api/portal/billing/engagements`, { credentials: "include" }).then(r => r.json()),
       fetch(`${BASE}/api/portal/billing/clients`, { credentials: "include" }).then(r => r.json()),
       fetch(`${BASE}/api/portal/billing/settings`, { credentials: "include" }).then(r => r.json()),
+      fetch(`${BASE}/api/portal/admin/cases`, { credentials: "include" }).then(r => r.json()),
     ]);
     setEngagements(Array.isArray(e) ? e : []);
     setClients(Array.isArray(c) ? c : []);
     if (s?.retainer_warning_pct) setRetainerWarningPct(Number(s.retainer_warning_pct));
+    setPortalCases(Array.isArray(pc) ? pc.map((x: any) => ({
+      id: x.id, caseNumber: x.caseNumber, clientId: x.clientId,
+      clientName: x.clientName ?? x.portalUser?.fullName ?? null,
+    })) : []);
     setLoading(false);
   };
 
@@ -113,6 +121,7 @@ export default function BillingEngagements() {
       hourlyRate: e.hourlyRate ?? "", retainerAmount: e.retainerAmount ?? "",
       retainerStartDate: e.retainerStartDate ?? "", budget: e.budget ?? "",
       status: e.status, notes: e.notes ?? "",
+      linkedPortalCaseId: e.linkedPortalCaseId ? String(e.linkedPortalCaseId) : "",
     });
     setEditing(e); setCreating(false);
   };
@@ -123,7 +132,14 @@ export default function BillingEngagements() {
     setSaving(true);
     const url = editing ? `${BASE}/api/portal/billing/engagements/${editing.id}` : `${BASE}/api/portal/billing/engagements`;
     const method = editing ? "PATCH" : "POST";
-    const body = { ...form, clientId: Number(form.clientId), hourlyRate: n(form.hourlyRate), retainerAmount: n(form.retainerAmount), budget: n(form.budget) };
+    const body = {
+      ...form,
+      clientId: Number(form.clientId),
+      hourlyRate: n(form.hourlyRate),
+      retainerAmount: n(form.retainerAmount),
+      budget: n(form.budget),
+      linkedPortalCaseId: form.linkedPortalCaseId ? Number(form.linkedPortalCaseId) : null,
+    };
     const res = await fetch(url, { method, credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     if (res.ok) { setEditing(null); setCreating(false); load(); }
     setSaving(false);
@@ -295,6 +311,30 @@ export default function BillingEngagements() {
                 <label className="block text-xs tracking-[0.12em] uppercase text-muted-foreground mb-1.5">Notes</label>
                 <textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} rows={2}
                   className="w-full bg-black border border-white/15 rounded px-3 py-2.5 text-sm text-foreground focus:outline-none focus:border-primary/60 transition-colors resize-none" />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-xs tracking-[0.12em] uppercase text-muted-foreground mb-1.5">
+                  Link to Portal Case <span className="normal-case text-muted-foreground/50">(optional — enables Time & Billing tab on case detail)</span>
+                </label>
+                <select
+                  value={form.linkedPortalCaseId}
+                  onChange={e => setForm(p => ({ ...p, linkedPortalCaseId: e.target.value }))}
+                  className="w-full bg-black border border-white/15 rounded px-3 py-2.5 text-sm text-foreground focus:outline-none focus:border-primary/60 transition-colors"
+                >
+                  <option value="">Not linked</option>
+                  {(form.clientId
+                    ? portalCases.filter(pc => {
+                        // if selected billing client maps to a portal user, filter by that client's cases
+                        const billingClient = clients.find(c => String(c.id) === form.clientId);
+                        return !billingClient || !pc.clientId || true; // show all for now; refine if needed
+                      })
+                    : portalCases
+                  ).map(pc => (
+                    <option key={pc.id} value={pc.id}>
+                      {pc.caseNumber}{pc.clientName ? ` — ${pc.clientName}` : ""}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
             <div className="flex justify-end gap-3 px-6 py-4 border-t border-white/8">

@@ -26,6 +26,7 @@ import ClientDocuments from '@/pages/portal/ClientDocuments';
 import ClientMessages from '@/pages/portal/ClientMessages';
 import AdminDashboard from '@/pages/portal/admin/AdminDashboard';
 import AdminClientNew from '@/pages/portal/admin/AdminClientNew';
+import AdminClientDetail from '@/pages/portal/admin/AdminClientDetail';
 import AdminNewCase from '@/pages/portal/admin/AdminNewCase';
 import AdminCaseDetail from '@/pages/portal/admin/AdminCaseDetail';
 import AdminInquiries from '@/pages/portal/admin/AdminInquiries';
@@ -33,6 +34,11 @@ import BillingDashboard from '@/pages/portal/admin/billing/BillingDashboard';
 import BillingClients from '@/pages/portal/admin/billing/BillingClients';
 import BillingEngagements from '@/pages/portal/admin/billing/BillingEngagements';
 import BillingTimeEntries from '@/pages/portal/admin/billing/BillingTimeEntries';
+import BillingStatements from '@/pages/portal/admin/billing/BillingStatements';
+import BillingStatementForm from '@/pages/portal/admin/billing/BillingStatementForm';
+import AdminStatementDetail from '@/pages/portal/admin/billing/AdminStatementDetail';
+import ClientBillingStatements from '@/pages/portal/client/ClientBillingStatements';
+import ClientStatementDetail from '@/pages/portal/client/ClientStatementDetail';
 import Intake from '@/pages/Intake';
 
 const queryClient = new QueryClient();
@@ -97,6 +103,12 @@ function Router() {
         <Route path="/portal/messages">
           <PortalGuard><ClientMessages /></PortalGuard>
         </Route>
+        <Route path="/portal/statements/:id">
+          <PortalGuard><ClientStatementDetail /></PortalGuard>
+        </Route>
+        <Route path="/portal/statements">
+          <PortalGuard><ClientBillingStatements /></PortalGuard>
+        </Route>
 
         {/* Admin portal */}
         <Route path="/portal/admin">
@@ -104,6 +116,9 @@ function Router() {
         </Route>
         <Route path="/portal/admin/clients/new">
           <PortalGuard adminOnly><AdminClientNew /></PortalGuard>
+        </Route>
+        <Route path="/portal/admin/clients/:id">
+          <PortalGuard adminOnly><AdminClientDetail /></PortalGuard>
         </Route>
         <Route path="/portal/admin/cases/new">
           <PortalGuard adminOnly><AdminNewCase /></PortalGuard>
@@ -124,6 +139,18 @@ function Router() {
         </Route>
         <Route path="/portal/admin/billing/time">
           <PortalGuard adminOnly><BillingTimeEntries /></PortalGuard>
+        </Route>
+        <Route path="/portal/admin/billing/statements/:id/edit">
+          <PortalGuard adminOnly><BillingStatementForm /></PortalGuard>
+        </Route>
+        <Route path="/portal/admin/billing/statements/new">
+          <PortalGuard adminOnly><BillingStatementForm /></PortalGuard>
+        </Route>
+        <Route path="/portal/admin/billing/statements/:id">
+          <PortalGuard adminOnly><AdminStatementDetail /></PortalGuard>
+        </Route>
+        <Route path="/portal/admin/billing/statements">
+          <PortalGuard adminOnly><BillingStatements /></PortalGuard>
         </Route>
         <Route path="/portal/admin/billing">
           <PortalGuard adminOnly><BillingDashboard /></PortalGuard>

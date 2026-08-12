@@ -1,0 +1,274 @@
+Update the Stonegate Intelligence Group Client Portal and Billable Hours system with the following access structure.
+
+IMPORTANT ACCESS RULE
+
+Clients/customers MUST NOT have access to the internal Billable Hours page.
+
+The Billable Hours page is strictly internal and should only be accessible to authorized Stonegate users.
+
+Clients should never be able to see:
+
+* Individual time entries
+* Investigator names
+* Internal notes
+* Internal billing calculations
+* Internal hourly tracking
+* Unbilled time
+* Internal billing rates unless intentionally included on a statement
+* Other clients’ information
+* Internal case-management information
+
+Enforce this through backend authorization, not simply by hiding navigation links.
+
+CLIENT PORTAL — BILLING STATEMENTS
+
+Create a client-facing section in the Client Portal called:
+
+“Billing Statements”
+
+This is where Stonegate can publish completed monthly billing statements for the client.
+
+The client should only see statements that have been specifically associated with their Client ID.
+
+STATEMENT TITLE
+
+Each statement should be titled:
+
+“Monthly Billing Statement”
+
+Display:
+
+STONEGATE INTELLIGENCE GROUP
+Monthly Billing Statement
+
+Then display:
+
+Statement Number
+Statement Date
+Billing Period
+Due Date
+
+Client:
+Client Name
+Billing Address
+Billing Email
+
+STATEMENT CONTENT
+
+The statement should summarize services performed without exposing Stonegate’s internal time-tracking system.
+
+Include:
+
+Description of Services
+Service Period
+Hours / Units, if appropriate
+Rate, if appropriate
+Amount
+
+The administrator should be able to choose what information appears on the client-facing statement.
+
+For example:
+
+“Investigative and research services provided during July 2026”
+
+rather than exposing every individual internal time entry.
+
+STATEMENT TOTALS
+
+Display:
+
+Previous Balance
+Current Charges
+Payments/Credits
+Amount Due
+
+Total Due
+
+If applicable, display:
+
+Retainer Applied
+Remaining Retainer Balance
+
+ADMIN STATEMENT CREATION
+
+Inside the internal administrative system, create:
+
+“Create Billing Statement”
+
+The administrator selects:
+
+Client
+Case / Engagement
+Billing Period
+Statement Date
+Due Date
+
+Then select which billable charges/time entries should be included.
+
+The system should calculate the statement total automatically.
+
+Allow the administrator to edit the client-facing description before publishing.
+
+STATEMENT STATUS
+
+Statements should have:
+
+Draft
+Published
+Paid
+Partially Paid
+Overdue
+Void
+
+Only “Published” statements should appear in the client portal.
+
+CLIENT PORTAL
+
+Inside the client’s portal, display:
+
+Billing Statements
+
+Each statement should appear as a card or table row:
+
+Statement Number
+Billing Period
+Statement Date
+Due Date
+Amount
+Status
+View Statement
+
+Example:
+
+SIG-2026-0007
+July 2026
+$1,250.00
+Due August 15, 2026
+Open
+
+Add:
+
+“View Statement”
+
+When clicked, open a professional statement detail page.
+
+STATEMENT DETAIL PAGE
+
+The client should be able to view the complete published statement.
+
+Include buttons:
+
+“Download PDF”
+“Print Statement”
+
+If payment functionality is eventually added, also provide:
+
+“Pay Statement”
+
+Do not implement payment processing unless an existing payment system is already configured.
+
+MONTHLY WORKFLOW
+
+The intended workflow should be:
+
+Internal Billable Hours
+↓
+Review Time Entries
+↓
+Select Client
+↓
+Select Billing Period
+↓
+Create Billing Statement
+↓
+Review Statement
+↓
+Publish Statement
+↓
+Statement appears in Client Portal
+↓
+Client views/downloads statement
+
+Clients should NEVER have access to the Billable Hours page during this process.
+
+NAVIGATION
+
+INTERNAL USERS:
+
+Client Portal
+Clients
+Cases
+Billable Hours
+Billing Statements
+Invoices
+Reports
+
+CLIENT USERS:
+
+Client Portal
+Services / Engagements
+Billing Statements
+Documents
+Messages
+
+Do not show “Billable Hours” anywhere in the client-facing portal.
+
+SECURITY
+
+A client should only be able to access:
+
+* Their own Client Portal
+* Their own statements
+* Their own documents
+* Their own engagement information that Stonegate has chosen to expose
+
+Do not rely on frontend navigation hiding.
+
+Enforce authorization on every backend request.
+
+A client must not be able to access another client’s statement by manually changing a URL, statement ID, client ID, or other parameter.
+
+PDF STATEMENT
+
+Create a professional PDF version of each published statement using Stonegate Intelligence Group branding.
+
+Include:
+
+STONEGATE
+INTELLIGENCE GROUP
+
+EVERY QUESTION DESERVES AN ANSWER GROUNDED IN EVIDENCE
+
+Monthly Billing Statement
+
+Statement information
+Client information
+Billing period
+Service summary
+Charges
+Payments/credits
+Amount due
+
+Include Stonegate Intelligence Group, LLC in the footer.
+
+Use the existing Stonegate logo and branding if available in the application.
+
+IMPORTANT
+
+Keep the internal Billable Hours system completely separate from the client-facing Billing Statements interface.
+
+The statement is a controlled, client-facing summary generated from internal billing information.
+
+Do not expose the underlying internal time-entry records to the client.
+
+After implementation, test both user types:
+
+INTERNAL USER:
+Can access Billable Hours and create/publish statements.
+
+CLIENT:
+Cannot access Billable Hours.
+Can access only published Billing Statements belonging to that client.
+Can view and download their statements.
+
+Do not break the existing Client Portal or authentication system.

@@ -148,6 +148,21 @@ export default function AdminDashboard() {
               ))}
             </div>
 
+            {/* Billable Hours quick-access card */}
+            <div
+              onClick={() => setLocation("/portal/admin/billing")}
+              className="border border-primary/20 hover:border-primary/50 bg-primary/5 hover:bg-primary/8 rounded-lg px-6 py-5 flex items-center justify-between cursor-pointer transition-colors group"
+            >
+              <div className="flex items-center gap-4">
+                <Clock className="w-5 h-5 text-primary" />
+                <div>
+                  <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">Billable Hours</p>
+                  <p className="text-xs text-muted-foreground">Track time, manage engagements, and create invoices</p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary transition-colors shrink-0" />
+            </div>
+
             {/* Unified Clients + Cases + Inquiries */}
             <div>
               <div className="flex items-center gap-3 mb-6">
@@ -173,7 +188,12 @@ export default function AdminDashboard() {
                         <div className="flex items-start gap-4">
                           {/* Client identity */}
                           <div className="min-w-0 w-44 shrink-0">
-                            <p className="text-sm font-medium text-foreground truncate">{client.name}</p>
+                            <button
+                              onClick={() => setLocation(`/portal/admin/clients/${client.id}`)}
+                              className="text-sm font-medium text-foreground hover:text-primary transition-colors truncate block text-left w-full"
+                            >
+                              {client.name}
+                            </button>
                             <p className="text-xs text-muted-foreground truncate">{client.email}</p>
                             {(() => {
                               const allClosed = clientCases.length > 0 && clientCases.every(c => c.status === "closed");

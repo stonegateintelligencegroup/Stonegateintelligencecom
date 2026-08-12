@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { useLocation } from "wouter";
 import { Plus, Download, ChevronUp, ChevronDown, Pencil, Copy, Trash2 } from "lucide-react";
 import BillingLayout from "./BillingLayout";
 import TimeEntryModal from "./TimeEntryModal";
@@ -8,13 +9,15 @@ const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 interface TimeEntry {
   id: number; date: string; startTime: string | null; endTime: string | null;
   billedHours: string; clientId: number; clientName: string | null;
+  linkedPortalUserId: number | null;
   engagementId: number | null; engagementName: string | null;
+  linkedPortalCaseId: number | null;
   investigator: string; activityType: string; description: string | null;
   billable: boolean; billingRate: string | null; billableAmount: string | null;
   billingStatus: string; internalNotes: string | null;
 }
-interface Client { id: number; name: string; defaultRate: string | null; }
-interface Engagement { id: number; name: string; clientId: number; hourlyRate: string | null; }
+interface Client { id: number; name: string; defaultRate: string | null; linkedPortalUserId: number | null; }
+interface Engagement { id: number; name: string; clientId: number; hourlyRate: string | null; linkedPortalCaseId: number | null; }
 
 const STATUS_COLOR: Record<string, string> = {
   unbilled: "text-yellow-400 border-yellow-400/30 bg-yellow-400/10",
@@ -25,6 +28,10 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 type SortKey = "date" | "clientName" | "engagementName" | "investigator" | "activityType" | "billedHours" | "billingRate" | "billableAmount" | "billingStatus";
+
+function getSearchParams() {
+  return new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
+}
 
 function exportCSV(entries: TimeEntry[]) {
   const headers = ["Date","Client","Engagement","Investigator","Activity","Description","Hours","Rate","Amount","Billable","Status"];
@@ -42,30 +49,31 @@ function exportCSV(entries: TimeEntry[]) {
 }
 
 export default function BillingTimeEntries() {
+  const [, setLocation] = useLocation();
   const today = new Date().toISOString().split("T")[0];
   const firstOfMonth = today.slice(0, 7) + "-01";
+
+  // Read initial state from URL params
+  const urlParams = getSearchParams();
+  const initClientId = urlParams.get("clientId") ?? "";
+  const initEngagementId = urlParams.get("engagementId") ?? "";
 
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [engagements, setEngagements] = useState<Engagement[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Filters
   const [dateFrom, setDateFrom] = useState(firstOfMonth);
   const [dateTo, setDateTo] = useState(today);
-  const [filterClient, setFilterClient] = useState("");
-  const [filterEngagement, setFilterEngagement] = useState("");
+  const [filterClient, setFilterClient] = useState(initClientId);
+  const [filterEngagement, setFilterEngagement] = useState(initEngagementId);
   const [filterBillable, setFilterBillable] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
 
-  // Sorting
   const [sortKey, setSortKey] = useState<SortKey>("date");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
-
-  // Selection
   const [selected, setSelected] = useState<Set<number>>(new Set());
 
-  // Modals
   const [showCreate, setShowCreate] = useState(false);
   const [editEntry, setEditEntry] = useState<TimeEntry | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
@@ -76,7 +84,10 @@ export default function BillingTimeEntries() {
       fetch(`${BASE}/api/portal/billing/engagements`, { credentials: "include" }).then(r => r.json()),
     ]);
     setClients(Array.isArray(c) ? c : []);
-    setEngagements(Array.isArray(e) ? e.map((x: any) => ({ id: x.id, name: x.name, clientId: x.clientId, hourlyRate: x.hourlyRate })) : []);
+    setEngagements(Array.isArray(e) ? e.map((x: any) => ({
+      id: x.id, name: x.name, clientId: x.clientId,
+      hourlyRate: x.hourlyRate, linkedPortalCaseId: x.linkedPortalCaseId ?? null,
+    })) : []);
   };
 
   const load = useCallback(async () => {
@@ -135,16 +146,33 @@ export default function BillingTimeEntries() {
     setConfirmDelete(null); load();
   };
 
+  // Filter engagements based on selected client (prevent cross-client association)
   const filteredEngagements = filterClient
     ? engagements.filter(e => e.clientId === Number(filterClient))
     : engagements;
 
   const th = (label: string, key: SortKey) => (
-    <th className="px-4 py-3 text-left text-xs tracking-[0.1em] uppercase text-muted-foreground cursor-pointer hover:text-foreground transition-colors whitespace-nowrap"
-      onClick={() => toggleSort(key)}>
+    <th
+      className="px-4 py-3 text-left text-xs tracking-[0.1em] uppercase text-muted-foreground cursor-pointer hover:text-foreground transition-colors whitespace-nowrap"
+      onClick={() => toggleSort(key)}
+    >
       {label} <SortIcon k={key} />
     </th>
   );
+
+  // Navigate to portal client detail
+  const goToClient = (e: TimeEntry) => {
+    if (e.linkedPortalUserId) {
+      setLocation(`/portal/admin/clients/${e.linkedPortalUserId}`);
+    }
+  };
+
+  // Navigate to portal case detail
+  const goToCase = (e: TimeEntry) => {
+    if (e.linkedPortalCaseId) {
+      setLocation(`/portal/admin/cases/${e.linkedPortalCaseId}`);
+    }
+  };
 
   return (
     <BillingLayout>
@@ -244,8 +272,32 @@ export default function BillingTimeEntries() {
                     <input type="checkbox" checked={selected.has(e.id)} onChange={() => toggleSelect(e.id)} className="accent-primary" />
                   </td>
                   <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{e.date}</td>
-                  <td className="px-4 py-3 text-xs text-foreground whitespace-nowrap">{e.clientName ?? "—"}</td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap max-w-[120px] truncate">{e.engagementName ?? "—"}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    {e.linkedPortalUserId ? (
+                      <button
+                        onClick={() => goToClient(e)}
+                        className="text-xs text-foreground hover:text-primary transition-colors underline-offset-2 hover:underline"
+                        title="Open client detail"
+                      >
+                        {e.clientName ?? "—"}
+                      </button>
+                    ) : (
+                      <span className="text-xs text-foreground">{e.clientName ?? "—"}</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 max-w-[120px]">
+                    {e.linkedPortalCaseId ? (
+                      <button
+                        onClick={() => goToCase(e)}
+                        className="text-xs text-muted-foreground hover:text-primary transition-colors underline-offset-2 hover:underline truncate block"
+                        title="Open case detail"
+                      >
+                        {e.engagementName ?? "—"}
+                      </button>
+                    ) : (
+                      <span className="text-xs text-muted-foreground truncate block">{e.engagementName ?? "—"}</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{e.investigator}</td>
                   <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{e.activityType}</td>
                   <td className="px-4 py-3 text-xs text-muted-foreground max-w-[160px] truncate">{e.description ?? "—"}</td>
@@ -298,12 +350,20 @@ export default function BillingTimeEntries() {
       )}
 
       {showCreate && (
-        <TimeEntryModal clients={clients} engagements={engagements}
-          onClose={() => setShowCreate(false)} onSaved={() => { setShowCreate(false); load(); }} />
+        <TimeEntryModal
+          clients={clients}
+          engagements={engagements}
+          // Pre-select client if filter active (prevents cross-client association)
+          initial={filterClient ? { clientId: filterClient } : undefined}
+          onClose={() => setShowCreate(false)}
+          onSaved={() => { setShowCreate(false); load(); }}
+        />
       )}
       {editEntry && (
         <TimeEntryModal
-          clients={clients} engagements={engagements} editId={editEntry.id}
+          clients={clients}
+          engagements={engagements}
+          editId={editEntry.id}
           initial={{
             date: editEntry.date, startTime: editEntry.startTime ?? "", endTime: editEntry.endTime ?? "",
             clientId: String(editEntry.clientId), engagementId: editEntry.engagementId ? String(editEntry.engagementId) : "",

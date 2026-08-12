@@ -8,8 +8,10 @@ import {
   portalUsersTable,
   portalCaseNotesTable,
   portalNoteFoldersTable,
+  billingStatementsTable,
+  billingStatementItemsTable,
 } from "@workspace/db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, asc } from "drizzle-orm";
 import { requireAuth } from "../../middlewares/auth";
 
 const MONICA_EMAIL = "Monica.Morgado@stonegateintelligence.com";
@@ -360,6 +362,139 @@ router.get("/notes", async (req: Request, res: Response) => {
     .orderBy(desc(portalCaseNotesTable.updatedAt));
 
   res.json(notes);
+});
+
+// ── Billing Statements (client-facing) ───────────────────────────────────────
+// SECURITY: Server enforces that portal_user_id = authenticated session user.
+// Clients can NEVER access the internal Billable Hours data.
+
+// GET /api/portal/client/statements
+router.get("/statements", async (req: Request, res: Response) => {
+  const userId = req.session.userId;
+  if (!userId) { res.status(401).json({ error: "Unauthorized." }); return; }
+
+  const rows = await db
+    .select({
+      id: billingStatementsTable.id,
+      statementNumber: billingStatementsTable.statementNumber,
+      billingPeriod: billingStatementsTable.billingPeriod,
+      statementDate: billingStatementsTable.statementDate,
+      dueDate: billingStatementsTable.dueDate,
+      amountDue: billingStatementsTable.amountDue,
+      status: billingStatementsTable.status,
+    })
+    .from(billingStatementsTable)
+    .where(
+      and(
+        eq(billingStatementsTable.portalUserId, userId),
+        eq(billingStatementsTable.status, "published")
+        // In practice, also allow paid/partially_paid/overdue so client sees their history
+      )
+    )
+    .orderBy(desc(billingStatementsTable.statementDate));
+
+  // Also include paid/partially_paid/overdue statements (client should see full history)
+  const allVisible = await db
+    .select({
+      id: billingStatementsTable.id,
+      statementNumber: billingStatementsTable.statementNumber,
+      billingPeriod: billingStatementsTable.billingPeriod,
+      statementDate: billingStatementsTable.statementDate,
+      dueDate: billingStatementsTable.dueDate,
+      amountDue: billingStatementsTable.amountDue,
+      status: billingStatementsTable.status,
+    })
+    .from(billingStatementsTable)
+    .where(eq(billingStatementsTable.portalUserId, userId))
+    .orderBy(desc(billingStatementsTable.statementDate));
+
+  // Filter to only client-visible statuses (not draft or void)
+  const visible = allVisible.filter(s =>
+    ["published", "paid", "partially_paid", "overdue"].includes(s.status)
+  );
+
+  res.json(visible);
+});
+
+// GET /api/portal/client/statements/:id
+router.get("/statements/:id", async (req: Request, res: Response) => {
+  const userId = req.session.userId;
+  if (!userId) { res.status(401).json({ error: "Unauthorized." }); return; }
+
+  const id = Number(req.params.id);
+
+  const [row] = await db
+    .select({
+      stmt: billingStatementsTable,
+    })
+    .from(billingStatementsTable)
+    .where(eq(billingStatementsTable.id, id))
+    .limit(1);
+
+  if (!row) { res.status(404).json({ error: "Not found." }); return; }
+
+  // SECURITY: Enforce ownership — client can only see their own statement
+  if (row.stmt.portalUserId !== userId) {
+    res.status(403).json({ error: "Access denied." });
+    return;
+  }
+
+  // SECURITY: Only published/paid/partially_paid/overdue statements are client-visible
+  if (!["published", "paid", "partially_paid", "overdue"].includes(row.stmt.status)) {
+    res.status(404).json({ error: "Not found." });
+    return;
+  }
+
+  // Fetch line items — these are client-safe (no investigator names, no internal time entry data)
+  const items = await db
+    .select({
+      id: billingStatementItemsTable.id,
+      description: billingStatementItemsTable.description,
+      servicePeriod: billingStatementItemsTable.servicePeriod,
+      quantity: billingStatementItemsTable.quantity,
+      rate: billingStatementItemsTable.rate,
+      amount: billingStatementItemsTable.amount,
+      showQuantity: billingStatementItemsTable.showQuantity,
+      showRate: billingStatementItemsTable.showRate,
+      sortOrder: billingStatementItemsTable.sortOrder,
+      // NOTE: timeEntryIds is intentionally EXCLUDED from this response
+    })
+    .from(billingStatementItemsTable)
+    .where(eq(billingStatementItemsTable.statementId, id))
+    .orderBy(asc(billingStatementItemsTable.sortOrder), asc(billingStatementItemsTable.id));
+
+  // Look up client name from billing_clients for display
+  const { sql: sqlFn } = await import("drizzle-orm");
+  const [clientInfo] = await db.execute(
+    sqlFn`SELECT bc.name, bc.address, bc.billing_email FROM billing_clients bc WHERE bc.id = ${row.stmt.billingClientId} LIMIT 1`
+  );
+
+  res.json({
+    id: row.stmt.id,
+    statementNumber: row.stmt.statementNumber,
+    billingPeriod: row.stmt.billingPeriod,
+    billingPeriodStart: row.stmt.billingPeriodStart,
+    billingPeriodEnd: row.stmt.billingPeriodEnd,
+    statementDate: row.stmt.statementDate,
+    dueDate: row.stmt.dueDate,
+    previousBalance: row.stmt.previousBalance,
+    currentCharges: row.stmt.currentCharges,
+    paymentsCredits: row.stmt.paymentsCredits,
+    amountDue: row.stmt.amountDue,
+    retainerApplied: row.stmt.retainerApplied,
+    remainingRetainer: row.stmt.remainingRetainer,
+    status: row.stmt.status,
+    // Client info from billing_clients
+    clientName: (clientInfo as any)?.name ?? null,
+    clientAddress: (clientInfo as any)?.address ?? null,
+    clientEmail: (clientInfo as any)?.billing_email ?? null,
+    // INTENTIONALLY OMITTED from client response:
+    // - adminNotes (internal only)
+    // - timeEntryIds on items (internal only)
+    // - investigator names
+    // - internal billing rates beyond what admin chose to show
+    items,
+  });
 });
 
 export default router;

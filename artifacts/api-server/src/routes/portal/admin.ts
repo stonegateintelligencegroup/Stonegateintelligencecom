@@ -10,7 +10,12 @@ import {
   portalCaseNotesTable,
   intakeSubmissionsTable,
 } from "@workspace/db";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, sql, inArray } from "drizzle-orm";
+import {
+  billingClientsTable,
+  billingEngagementsTable,
+  timeEntriesTable,
+} from "@workspace/db";
 import { requireAdmin } from "../../middlewares/auth";
 import { Resend } from "resend";
 
@@ -502,6 +507,171 @@ router.delete("/case-notes/:noteId", async (req: Request, res: Response) => {
     .delete(portalCaseNotesTable)
     .where(eq(portalCaseNotesTable.id, Number(req.params.noteId)));
   res.json({ ok: true });
+});
+
+// ── Client Billing Integration ────────────────────────────────────────────────
+
+// GET /api/portal/admin/clients/:id — single portal client + cases
+router.get("/clients/:id", async (req: Request, res: Response) => {
+  const id = Number(req.params.id);
+  const [client] = await db
+    .select()
+    .from(portalUsersTable)
+    .where(and(eq(portalUsersTable.id, id), eq(portalUsersTable.role, "client")))
+    .limit(1);
+  if (!client) { res.status(404).json({ error: "Client not found." }); return; }
+
+  const cases = await db
+    .select({
+      id: portalCasesTable.id,
+      caseNumber: portalCasesTable.caseNumber,
+      status: portalCasesTable.status,
+      assignedInvestigator: portalCasesTable.assignedInvestigator,
+      notes: portalCasesTable.notes,
+      lastUpdate: portalCasesTable.lastUpdate,
+      createdAt: portalCasesTable.createdAt,
+    })
+    .from(portalCasesTable)
+    .where(eq(portalCasesTable.clientId, id))
+    .orderBy(desc(portalCasesTable.createdAt));
+
+  res.json({
+    id: client.id, name: client.name, email: client.email,
+    isActive: client.isActive, createdAt: client.createdAt, cases,
+  });
+});
+
+// GET /api/portal/admin/clients/:id/billing — billing summary + entries for a portal client
+router.get("/clients/:id/billing", async (req: Request, res: Response) => {
+  const portalUserId = Number(req.params.id);
+
+  // Find billing_client linked to this portal user
+  const [billingClient] = await db
+    .select()
+    .from(billingClientsTable)
+    .where(eq(billingClientsTable.linkedPortalUserId, portalUserId))
+    .limit(1);
+
+  if (!billingClient) {
+    res.json({ linked: false, billingClientId: null, summary: null, entries: [] });
+    return;
+  }
+
+  // Aggregate summary
+  const [summary] = await db
+    .select({
+      totalHours: sql<string>`COALESCE(SUM(${timeEntriesTable.billedMinutes}), 0)`,
+      billableAmount: sql<string>`COALESCE(SUM(CASE WHEN ${timeEntriesTable.billable} THEN ${timeEntriesTable.billableAmount}::numeric ELSE 0 END), 0)`,
+      unbilledAmount: sql<string>`COALESCE(SUM(CASE WHEN ${timeEntriesTable.billable} AND ${timeEntriesTable.billingStatus} IN ('unbilled','ready_to_invoice') THEN ${timeEntriesTable.billableAmount}::numeric ELSE 0 END), 0)`,
+      invoicedAmount: sql<string>`COALESCE(SUM(CASE WHEN ${timeEntriesTable.billingStatus} = 'invoiced' THEN ${timeEntriesTable.billableAmount}::numeric ELSE 0 END), 0)`,
+      paidAmount: sql<string>`COALESCE(SUM(CASE WHEN ${timeEntriesTable.billingStatus} = 'paid' THEN ${timeEntriesTable.billableAmount}::numeric ELSE 0 END), 0)`,
+    })
+    .from(timeEntriesTable)
+    .where(eq(timeEntriesTable.clientId, billingClient.id));
+
+  // Recent entries with engagement names
+  const entries = await db
+    .select({
+      id: timeEntriesTable.id,
+      date: timeEntriesTable.date,
+      billedHours: timeEntriesTable.billedHours,
+      clientId: timeEntriesTable.clientId,
+      engagementId: timeEntriesTable.engagementId,
+      engagementName: billingEngagementsTable.name,
+      investigator: timeEntriesTable.investigator,
+      activityType: timeEntriesTable.activityType,
+      description: timeEntriesTable.description,
+      billable: timeEntriesTable.billable,
+      billingRate: timeEntriesTable.billingRate,
+      billableAmount: timeEntriesTable.billableAmount,
+      billingStatus: timeEntriesTable.billingStatus,
+    })
+    .from(timeEntriesTable)
+    .leftJoin(billingEngagementsTable, eq(timeEntriesTable.engagementId, billingEngagementsTable.id))
+    .where(eq(timeEntriesTable.clientId, billingClient.id))
+    .orderBy(desc(timeEntriesTable.date))
+    .limit(200);
+
+  // Retainer balance if applicable
+  const retainerEngagements = await db
+    .select({ retainerAmount: billingEngagementsTable.retainerAmount, billedAmount: sql<string>`COALESCE(SUM(${timeEntriesTable.billableAmount}::numeric), 0)` })
+    .from(billingEngagementsTable)
+    .leftJoin(timeEntriesTable, eq(timeEntriesTable.engagementId, billingEngagementsTable.id))
+    .where(and(eq(billingEngagementsTable.clientId, billingClient.id), eq(billingEngagementsTable.billingStructure, "retainer")))
+    .groupBy(billingEngagementsTable.id, billingEngagementsTable.retainerAmount);
+
+  const retainerBalance = retainerEngagements.reduce((total, r) => {
+    if (!r.retainerAmount) return total;
+    return total + parseFloat(r.retainerAmount) - parseFloat(r.billedAmount);
+  }, 0);
+
+  res.json({
+    linked: true,
+    billingClientId: billingClient.id,
+    billingClientName: billingClient.name,
+    summary: {
+      totalHours: parseFloat(summary.totalHours) / 60,
+      billableAmount: parseFloat(summary.billableAmount),
+      unbilledAmount: parseFloat(summary.unbilledAmount),
+      invoicedAmount: parseFloat(summary.invoicedAmount),
+      paidAmount: parseFloat(summary.paidAmount),
+      retainerBalance: retainerEngagements.length > 0 ? retainerBalance : null,
+    },
+    entries,
+  });
+});
+
+// GET /api/portal/admin/cases/:id/billing — billing summary + entries for a portal case
+router.get("/cases/:id/billing", async (req: Request, res: Response) => {
+  const portalCaseId = Number(req.params.id);
+
+  // Find billing_engagement linked to this portal case
+  const [engagement] = await db
+    .select()
+    .from(billingEngagementsTable)
+    .where(eq(billingEngagementsTable.linkedPortalCaseId, portalCaseId))
+    .limit(1);
+
+  if (!engagement) {
+    res.json({ linked: false, engagementId: null, summary: null, entries: [] });
+    return;
+  }
+
+  const [summary] = await db
+    .select({
+      totalHours: sql<string>`COALESCE(SUM(${timeEntriesTable.billedMinutes}), 0)`,
+      billableHours: sql<string>`COALESCE(SUM(CASE WHEN ${timeEntriesTable.billable} THEN ${timeEntriesTable.billedMinutes} ELSE 0 END), 0)`,
+      nonBillableHours: sql<string>`COALESCE(SUM(CASE WHEN NOT ${timeEntriesTable.billable} THEN ${timeEntriesTable.billedMinutes} ELSE 0 END), 0)`,
+      billableAmount: sql<string>`COALESCE(SUM(CASE WHEN ${timeEntriesTable.billable} THEN ${timeEntriesTable.billableAmount}::numeric ELSE 0 END), 0)`,
+      unbilledAmount: sql<string>`COALESCE(SUM(CASE WHEN ${timeEntriesTable.billable} AND ${timeEntriesTable.billingStatus} IN ('unbilled','ready_to_invoice') THEN ${timeEntriesTable.billableAmount}::numeric ELSE 0 END), 0)`,
+      invoicedAmount: sql<string>`COALESCE(SUM(CASE WHEN ${timeEntriesTable.billingStatus} IN ('invoiced','paid') THEN ${timeEntriesTable.billableAmount}::numeric ELSE 0 END), 0)`,
+    })
+    .from(timeEntriesTable)
+    .where(eq(timeEntriesTable.engagementId, engagement.id));
+
+  const entries = await db
+    .select()
+    .from(timeEntriesTable)
+    .where(eq(timeEntriesTable.engagementId, engagement.id))
+    .orderBy(desc(timeEntriesTable.date))
+    .limit(200);
+
+  res.json({
+    linked: true,
+    engagementId: engagement.id,
+    engagementName: engagement.name,
+    budget: engagement.budget,
+    billingStructure: engagement.billingStructure,
+    summary: {
+      totalHours: parseFloat(summary.totalHours) / 60,
+      billableHours: parseFloat(summary.billableHours) / 60,
+      nonBillableHours: parseFloat(summary.nonBillableHours) / 60,
+      billableAmount: parseFloat(summary.billableAmount),
+      unbilledAmount: parseFloat(summary.unbilledAmount),
+      invoicedAmount: parseFloat(summary.invoicedAmount),
+    },
+    entries,
+  });
 });
 
 export default router;

@@ -8,6 +8,8 @@ import {
   invoiceLineItemsTable,
   billingSettingsTable,
   billingAuditLogTable,
+  billingStatementsTable,
+  billingStatementItemsTable,
 } from "@workspace/db";
 import { eq, desc, and, gte, lte, inArray, sql, asc } from "drizzle-orm";
 import { requireAdmin } from "../middlewares/auth";
@@ -274,7 +276,9 @@ router.get("/time-entries", async (req: Request, res: Response) => {
     .select({
       entry: timeEntriesTable,
       clientName: billingClientsTable.name,
+      linkedPortalUserId: billingClientsTable.linkedPortalUserId,
       engagementName: billingEngagementsTable.name,
+      linkedPortalCaseId: billingEngagementsTable.linkedPortalCaseId,
     })
     .from(timeEntriesTable)
     .leftJoin(billingClientsTable, eq(timeEntriesTable.clientId, billingClientsTable.id))
@@ -282,7 +286,13 @@ router.get("/time-entries", async (req: Request, res: Response) => {
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(desc(timeEntriesTable.date), desc(timeEntriesTable.createdAt));
 
-  res.json(rows.map(r => ({ ...r.entry, clientName: r.clientName, engagementName: r.engagementName })));
+  res.json(rows.map(r => ({
+    ...r.entry,
+    clientName: r.clientName,
+    linkedPortalUserId: r.linkedPortalUserId,
+    engagementName: r.engagementName,
+    linkedPortalCaseId: r.linkedPortalCaseId,
+  })));
 });
 
 // GET /api/portal/billing/time-entries/summary — aggregate stats for dashboard
@@ -791,6 +801,312 @@ router.get("/audit-log", async (req: Request, res: Response) => {
     .orderBy(desc(billingAuditLogTable.createdAt))
     .limit(200);
   res.json(rows);
+});
+
+// ── Billing Statements ────────────────────────────────────────────────────────
+
+/** Auto-generate next statement number: SIG-YYYY-NNNN */
+async function nextStatementNumber(): Promise<string> {
+  const year = new Date().getFullYear();
+  const prefix = `SIG-${year}-`;
+  const [row] = await db
+    .select({ num: billingStatementsTable.statementNumber })
+    .from(billingStatementsTable)
+    .where(sql`${billingStatementsTable.statementNumber} LIKE ${prefix + "%"}`)
+    .orderBy(desc(billingStatementsTable.id))
+    .limit(1);
+  let seq = 1;
+  if (row) {
+    const parts = row.num.split("-");
+    seq = parseInt(parts[parts.length - 1], 10) + 1;
+  }
+  return `${prefix}${String(seq).padStart(4, "0")}`;
+}
+
+// GET /api/portal/billing/statements
+router.get("/statements", async (req: Request, res: Response) => {
+  const rows = await db
+    .select({
+      stmt: billingStatementsTable,
+      clientName: billingClientsTable.name,
+      engagementName: billingEngagementsTable.name,
+    })
+    .from(billingStatementsTable)
+    .leftJoin(billingClientsTable, eq(billingStatementsTable.billingClientId, billingClientsTable.id))
+    .leftJoin(billingEngagementsTable, eq(billingStatementsTable.engagementId, billingEngagementsTable.id))
+    .orderBy(desc(billingStatementsTable.createdAt));
+
+  res.json(rows.map(r => ({
+    ...r.stmt,
+    clientName: r.clientName,
+    engagementName: r.engagementName,
+  })));
+});
+
+// POST /api/portal/billing/statements
+router.post("/statements", async (req: Request, res: Response) => {
+  const {
+    billingClientId, engagementId, portalUserId,
+    billingPeriod, billingPeriodStart, billingPeriodEnd,
+    statementDate, dueDate,
+    previousBalance = 0, currentCharges = 0, paymentsCredits = 0,
+    retainerApplied = 0, remainingRetainer = 0,
+    adminNotes,
+  } = req.body;
+
+  if (!billingPeriod || !statementDate) {
+    res.status(400).json({ error: "billingPeriod and statementDate are required." });
+    return;
+  }
+
+  const amountDue = Math.max(
+    0,
+    parseFloat(String(previousBalance)) +
+    parseFloat(String(currentCharges)) -
+    parseFloat(String(paymentsCredits)) -
+    parseFloat(String(retainerApplied))
+  );
+
+  const statementNumber = await nextStatementNumber();
+
+  const [row] = await db
+    .insert(billingStatementsTable)
+    .values({
+      statementNumber,
+      billingClientId: billingClientId ? Number(billingClientId) : null,
+      engagementId: engagementId ? Number(engagementId) : null,
+      portalUserId: portalUserId ? Number(portalUserId) : null,
+      billingPeriod,
+      billingPeriodStart: billingPeriodStart || null,
+      billingPeriodEnd: billingPeriodEnd || null,
+      statementDate,
+      dueDate: dueDate || null,
+      previousBalance: String(previousBalance),
+      currentCharges: String(currentCharges),
+      paymentsCredits: String(paymentsCredits),
+      amountDue: String(amountDue),
+      retainerApplied: String(retainerApplied),
+      remainingRetainer: String(remainingRetainer),
+      adminNotes: adminNotes || null,
+    })
+    .returning();
+
+  res.status(201).json(row);
+});
+
+// GET /api/portal/billing/statements/:id
+router.get("/statements/:id", async (req: Request, res: Response) => {
+  const id = Number(req.params.id);
+  const [row] = await db
+    .select({
+      stmt: billingStatementsTable,
+      clientName: billingClientsTable.name,
+      clientAddress: billingClientsTable.address,
+      clientEmail: billingClientsTable.billingEmail,
+      engagementName: billingEngagementsTable.name,
+    })
+    .from(billingStatementsTable)
+    .leftJoin(billingClientsTable, eq(billingStatementsTable.billingClientId, billingClientsTable.id))
+    .leftJoin(billingEngagementsTable, eq(billingStatementsTable.engagementId, billingEngagementsTable.id))
+    .where(eq(billingStatementsTable.id, id));
+
+  if (!row) { res.status(404).json({ error: "Not found." }); return; }
+
+  const items = await db
+    .select()
+    .from(billingStatementItemsTable)
+    .where(eq(billingStatementItemsTable.statementId, id))
+    .orderBy(asc(billingStatementItemsTable.sortOrder), asc(billingStatementItemsTable.id));
+
+  res.json({ ...row.stmt, clientName: row.clientName, clientAddress: row.clientAddress, clientEmail: row.clientEmail, engagementName: row.engagementName, items });
+});
+
+// PATCH /api/portal/billing/statements/:id
+router.patch("/statements/:id", async (req: Request, res: Response) => {
+  const id = Number(req.params.id);
+  const {
+    billingClientId, engagementId, portalUserId,
+    billingPeriod, billingPeriodStart, billingPeriodEnd,
+    statementDate, dueDate,
+    previousBalance, currentCharges, paymentsCredits,
+    retainerApplied, remainingRetainer,
+    status, adminNotes,
+  } = req.body;
+
+  const updates: Record<string, unknown> = { updatedAt: new Date() };
+  if (billingClientId !== undefined) updates.billingClientId = billingClientId ? Number(billingClientId) : null;
+  if (engagementId !== undefined) updates.engagementId = engagementId ? Number(engagementId) : null;
+  if (portalUserId !== undefined) updates.portalUserId = portalUserId ? Number(portalUserId) : null;
+  if (billingPeriod !== undefined) updates.billingPeriod = billingPeriod;
+  if (billingPeriodStart !== undefined) updates.billingPeriodStart = billingPeriodStart || null;
+  if (billingPeriodEnd !== undefined) updates.billingPeriodEnd = billingPeriodEnd || null;
+  if (statementDate !== undefined) updates.statementDate = statementDate;
+  if (dueDate !== undefined) updates.dueDate = dueDate || null;
+  if (previousBalance !== undefined) updates.previousBalance = String(previousBalance);
+  if (currentCharges !== undefined) updates.currentCharges = String(currentCharges);
+  if (paymentsCredits !== undefined) updates.paymentsCredits = String(paymentsCredits);
+  if (retainerApplied !== undefined) updates.retainerApplied = String(retainerApplied);
+  if (remainingRetainer !== undefined) updates.remainingRetainer = String(remainingRetainer);
+  if (adminNotes !== undefined) updates.adminNotes = adminNotes || null;
+  if (status !== undefined) updates.status = status;
+
+  // Recompute amount due from known fields
+  if (previousBalance !== undefined || currentCharges !== undefined || paymentsCredits !== undefined || retainerApplied !== undefined) {
+    const [current] = await db.select().from(billingStatementsTable).where(eq(billingStatementsTable.id, id)).limit(1);
+    if (current) {
+      const pb = parseFloat(String(updates.previousBalance ?? current.previousBalance ?? 0));
+      const cc = parseFloat(String(updates.currentCharges ?? current.currentCharges ?? 0));
+      const pc = parseFloat(String(updates.paymentsCredits ?? current.paymentsCredits ?? 0));
+      const ra = parseFloat(String(updates.retainerApplied ?? current.retainerApplied ?? 0));
+      updates.amountDue = String(Math.max(0, pb + cc - pc - ra));
+    }
+  }
+
+  const [updated] = await db
+    .update(billingStatementsTable)
+    .set(updates as any)
+    .where(eq(billingStatementsTable.id, id))
+    .returning();
+
+  if (!updated) { res.status(404).json({ error: "Not found." }); return; }
+  res.json(updated);
+});
+
+// POST /api/portal/billing/statements/:id/publish
+router.post("/statements/:id/publish", async (req: Request, res: Response) => {
+  const id = Number(req.params.id);
+  const [updated] = await db
+    .update(billingStatementsTable)
+    .set({ status: "published", publishedAt: new Date(), updatedAt: new Date() })
+    .where(eq(billingStatementsTable.id, id))
+    .returning();
+  if (!updated) { res.status(404).json({ error: "Not found." }); return; }
+  res.json(updated);
+});
+
+// PATCH /api/portal/billing/statements/:id/status
+router.patch("/statements/:id/status", async (req: Request, res: Response) => {
+  const id = Number(req.params.id);
+  const { status } = req.body;
+  const validStatuses = ["draft","published","paid","partially_paid","overdue","void"];
+  if (!validStatuses.includes(status)) { res.status(400).json({ error: "Invalid status." }); return; }
+
+  const extraFields: Record<string, unknown> = { status, updatedAt: new Date() };
+  if (status === "published") extraFields.publishedAt = new Date();
+
+  const [updated] = await db
+    .update(billingStatementsTable)
+    .set(extraFields as any)
+    .where(eq(billingStatementsTable.id, id))
+    .returning();
+  if (!updated) { res.status(404).json({ error: "Not found." }); return; }
+  res.json(updated);
+});
+
+// DELETE /api/portal/billing/statements/:id
+router.delete("/statements/:id", async (req: Request, res: Response) => {
+  const id = Number(req.params.id);
+  await db.delete(billingStatementsTable).where(eq(billingStatementsTable.id, id));
+  res.json({ ok: true });
+});
+
+// POST /api/portal/billing/statements/:id/items
+router.post("/statements/:id/items", async (req: Request, res: Response) => {
+  const statementId = Number(req.params.id);
+  const { description, servicePeriod, quantity, rate, amount, showQuantity, showRate, sortOrder, timeEntryIds } = req.body;
+  if (!description) { res.status(400).json({ error: "description is required." }); return; }
+
+  const [item] = await db
+    .insert(billingStatementItemsTable)
+    .values({
+      statementId,
+      description,
+      servicePeriod: servicePeriod || null,
+      quantity: quantity != null ? String(quantity) : null,
+      rate: rate != null ? String(rate) : null,
+      amount: String(amount ?? 0),
+      showQuantity: showQuantity !== false,
+      showRate: showRate !== false,
+      sortOrder: sortOrder ?? 0,
+      timeEntryIds: timeEntryIds ? JSON.stringify(timeEntryIds) : "[]",
+    })
+    .returning();
+
+  // Recompute current charges from all items
+  await recalcStatementCharges(statementId);
+  res.status(201).json(item);
+});
+
+// PATCH /api/portal/billing/statements/:id/items/:itemId
+router.patch("/statements/:id/items/:itemId", async (req: Request, res: Response) => {
+  const statementId = Number(req.params.id);
+  const itemId = Number(req.params.itemId);
+  const { description, servicePeriod, quantity, rate, amount, showQuantity, showRate, sortOrder, timeEntryIds } = req.body;
+
+  const updates: Record<string, unknown> = {};
+  if (description !== undefined) updates.description = description;
+  if (servicePeriod !== undefined) updates.servicePeriod = servicePeriod || null;
+  if (quantity !== undefined) updates.quantity = quantity != null ? String(quantity) : null;
+  if (rate !== undefined) updates.rate = rate != null ? String(rate) : null;
+  if (amount !== undefined) updates.amount = String(amount);
+  if (showQuantity !== undefined) updates.showQuantity = showQuantity;
+  if (showRate !== undefined) updates.showRate = showRate;
+  if (sortOrder !== undefined) updates.sortOrder = sortOrder;
+  if (timeEntryIds !== undefined) updates.timeEntryIds = JSON.stringify(timeEntryIds);
+
+  const [item] = await db
+    .update(billingStatementItemsTable)
+    .set(updates as any)
+    .where(and(eq(billingStatementItemsTable.id, itemId), eq(billingStatementItemsTable.statementId, statementId)))
+    .returning();
+
+  await recalcStatementCharges(statementId);
+  res.json(item);
+});
+
+// DELETE /api/portal/billing/statements/:id/items/:itemId
+router.delete("/statements/:id/items/:itemId", async (req: Request, res: Response) => {
+  const statementId = Number(req.params.id);
+  const itemId = Number(req.params.itemId);
+  await db
+    .delete(billingStatementItemsTable)
+    .where(and(eq(billingStatementItemsTable.id, itemId), eq(billingStatementItemsTable.statementId, statementId)));
+  await recalcStatementCharges(statementId);
+  res.json({ ok: true });
+});
+
+async function recalcStatementCharges(statementId: number) {
+  const items = await db.select({ amount: billingStatementItemsTable.amount }).from(billingStatementItemsTable).where(eq(billingStatementItemsTable.statementId, statementId));
+  const total = items.reduce((s, i) => s + parseFloat(String(i.amount ?? 0)), 0);
+  const [current] = await db.select().from(billingStatementsTable).where(eq(billingStatementsTable.id, statementId)).limit(1);
+  if (!current) return;
+  const pb = parseFloat(String(current.previousBalance ?? 0));
+  const pc = parseFloat(String(current.paymentsCredits ?? 0));
+  const ra = parseFloat(String(current.retainerApplied ?? 0));
+  const amountDue = Math.max(0, pb + total - pc - ra);
+  await db.update(billingStatementsTable).set({ currentCharges: String(total), amountDue: String(amountDue), updatedAt: new Date() }).where(eq(billingStatementsTable.id, statementId));
+}
+
+// GET /api/portal/billing/statements/:id/available-time-entries
+// Returns unbilled time entries for the statement's client/engagement (admin only, never exposed to client)
+router.get("/statements/:id/available-time-entries", async (req: Request, res: Response) => {
+  const id = Number(req.params.id);
+  const [stmt] = await db.select().from(billingStatementsTable).where(eq(billingStatementsTable.id, id)).limit(1);
+  if (!stmt) { res.status(404).json({ error: "Not found." }); return; }
+
+  const conditions: ReturnType<typeof eq>[] = [eq(timeEntriesTable.billingStatus, "unbilled")];
+  if (stmt.billingClientId) conditions.push(eq(timeEntriesTable.clientId, stmt.billingClientId));
+  if (stmt.engagementId) conditions.push(eq(timeEntriesTable.engagementId, stmt.engagementId as any));
+
+  const entries = await db
+    .select({ entry: timeEntriesTable, engagementName: billingEngagementsTable.name })
+    .from(timeEntriesTable)
+    .leftJoin(billingEngagementsTable, eq(timeEntriesTable.engagementId as any, billingEngagementsTable.id))
+    .where(conditions.length > 1 ? and(...conditions) : conditions[0])
+    .orderBy(desc(timeEntriesTable.date))
+    .limit(200);
+
+  res.json(entries.map(e => ({ ...e.entry, engagementName: e.engagementName })));
 });
 
 export default router;

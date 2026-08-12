@@ -1,0 +1,340 @@
+Update the existing Stonegate Intelligence Group application so that the Client Portal, Clients, Cases, and Billable Hours system are properly connected.
+
+Do not create a separate application. Inspect the existing code and database first and integrate these changes into the current architecture.
+
+1. CONNECT CLIENTS TO BILLABLE HOURS
+
+Each client in the existing Client Portal must have a unique Client ID.
+
+Each client should be able to have one or more Cases / Engagements.
+
+The relationship should be:
+
+Client
+→ Cases / Engagements
+→ Time Entries
+→ Invoices
+
+Every billable time entry must be associated with:
+
+* Client ID
+* Case / Engagement ID
+* User / Investigator ID
+
+Do not associate clients to time entries using only the client’s name. Use database IDs/foreign keys so records remain accurate if a client’s name changes.
+
+2. CLIENT PORTAL — CLIENT BILLING VIEW
+
+On the internal Client Portal, when an administrator or manager opens a client, add a section/tab:
+
+“Billing & Time”
+
+Display:
+
+* Total Billable Hours
+* Total Billable Amount
+* Unbilled Amount
+* Invoiced Amount
+* Paid Amount
+* Active Retainer Balance, if applicable
+
+Below the summary, display the client’s time entries.
+
+Columns:
+
+Date
+Case
+Investigator
+Activity
+Description
+Hours
+Rate
+Amount
+Billing Status
+
+Allow filtering by:
+
+* Case
+* Date range
+* Investigator
+* Billing status
+
+3. CLIENT DETAIL PAGE NAVIGATION
+
+On each Client Detail page, create clear navigation:
+
+Overview
+Cases
+Billing & Time
+Invoices
+Documents
+Notes
+
+Only display sections that already exist or are being implemented.
+
+Clicking “Billing & Time” should display only time entries associated with that client.
+
+Do NOT show another client’s billing information.
+
+4. CASE-LEVEL BILLING
+
+When viewing a specific Case / Engagement, display:
+
+Case Overview
+Time & Billing
+Reports
+Documents
+Notes
+
+The Time & Billing section should show only time entries belonging to that specific case.
+
+Display:
+
+Total Hours
+Billable Hours
+Non-Billable Hours
+Billable Amount
+Unbilled Amount
+Invoiced Amount
+
+5. BILLABLE HOURS PAGE — CLIENT FILTER
+
+On the main Billable Hours page, add a Client dropdown/filter at the top.
+
+Filters should include:
+
+Client
+Case / Engagement
+Investigator
+Date Range
+Billing Status
+Billable / Non-Billable
+
+When a client is selected, only that client’s time entries should be displayed.
+
+When a case is selected after choosing a client, only cases belonging to that client should appear.
+
+Do not allow a user to accidentally associate a time entry with a case belonging to another client.
+
+6. ADD TIME ENTRY
+
+When creating a new time entry:
+
+First select:
+
+Client
+
+Then dynamically populate:
+
+Case / Engagement
+
+Only cases belonging to the selected client should be available.
+
+Then select:
+
+Investigator
+Date
+Activity
+Start Time
+End Time
+Description
+Billable / Non-Billable
+Billing Rate
+
+Automatically calculate:
+
+Duration
+Billable Hours
+Billable Amount
+
+If the selected case has a default billing rate, populate it automatically.
+
+7. CLIENT PORTAL → BILLABLE HOURS BUTTON
+
+On the main Client Portal page, add a prominent button/card:
+
+“Billable Hours”
+
+Clicking it should take the administrator/authorized user to the Billable Hours dashboard.
+
+Also provide:
+
+“View Client Billing”
+
+on individual client records.
+
+That button should open the Billable Hours page with the client automatically selected as a filter.
+
+For example:
+
+Client Portal
+→ Client: ABC Corporation
+→ View Client Billing
+→ Billable Hours page
+→ Client filter automatically set to ABC Corporation
+
+8. BILLABLE HOURS → CLIENT
+
+On each time-entry row, make the Client name clickable.
+
+Clicking the client should open that client’s Client Detail page.
+
+Example:
+
+Billable Hours
+→ ABC Corporation
+→ Client Detail
+
+Likewise, make the Case / Engagement clickable and open the appropriate Case Detail page.
+
+9. BACK BUTTON TO CLIENT PORTAL
+
+Add a clear navigation button at the top of the Billable Hours page:
+
+← Back to Client Portal
+
+The button should return the user to the existing Client Portal route/page.
+
+Do NOT use browser history as the primary method.
+
+Use the actual Client Portal route.
+
+The button should remain visible on desktop and mobile.
+
+10. CONTEXT-AWARE BACK NAVIGATION
+
+If the user entered Billable Hours from a specific client, provide:
+
+← Back to Client
+
+and return them to that client’s Client Detail page.
+
+If they entered from the general Client Portal, show:
+
+← Back to Client Portal
+
+Use the appropriate destination based on the user’s navigation context.
+
+11. BREADCRUMBS
+
+Add breadcrumbs near the top of the page.
+
+Example:
+
+Client Portal
+/
+ABC Corporation
+/
+Billing & Time
+
+Or for the general Billable Hours page:
+
+Client Portal
+/
+Billable Hours
+
+Make each breadcrumb clickable.
+
+12. CLIENT PORTAL BILLING SUMMARY
+
+On each client card in the Client Portal, add a small billing summary if appropriate:
+
+Billable Hours
+Unbilled
+Invoiced
+
+Example:
+
+Billable Hours: 14.6
+Unbilled: $1,095
+Invoiced: $2,450
+
+Add a button:
+
+“Billing & Time →”
+
+This should open the client’s filtered billing view.
+
+13. SECURITY
+
+Enforce all client filtering and access control on the backend.
+
+Do NOT rely solely on frontend filtering.
+
+Every database query for client billing/time entries must verify the user’s authorization to access that client.
+
+A user must never be able to access another client’s billing information simply by changing a URL parameter or Client ID.
+
+Use the existing authentication and authorization system.
+
+14. DATABASE RELATIONSHIPS
+
+Verify that the database relationships are properly established.
+
+Recommended relationship:
+
+clients
+↓
+cases
+↓
+time_entries
+↓
+invoices
+
+time_entries should contain:
+
+client_id
+case_id
+user_id
+
+cases should contain:
+
+client_id
+
+invoices should contain:
+
+client_id
+case_id
+
+Use foreign keys and appropriate indexes.
+
+Do not duplicate client information unnecessarily inside time entries.
+
+15. TEST THE COMPLETE WORKFLOW
+
+Test this exact workflow:
+
+1. Open Client Portal.
+2. Select Client A.
+3. Open Client A.
+4. Open Billing & Time.
+5. Confirm only Client A’s time entries appear.
+6. Click Add Time Entry.
+7. Select Client A.
+8. Confirm only Client A’s cases appear.
+9. Create a billable time entry.
+10. Confirm the entry appears under Client A.
+11. Confirm the billing amount is calculated correctly.
+12. Return to Client Portal.
+13. Select Client B.
+14. Confirm Client B cannot see Client A’s time entries.
+15. Click Billable Hours.
+16. Confirm the back button returns to the correct Client Portal/client page.
+17. Test the same workflow on mobile.
+
+IMPORTANT
+
+Do not rebuild the existing Client Portal.
+
+Modify the existing application so the Client Portal and Billable Hours system function as one connected system.
+
+Before making changes, inspect the existing routes, components, database schema, authentication, and navigation structure.
+
+After completing the work, tell me:
+
+* What route the Client Portal uses
+* What route the Billable Hours page uses
+* What database relationships were added/modified
+* What files were changed
+* How the Client → Case → Time Entry relationship works
+* Whether anything still needs to be configured

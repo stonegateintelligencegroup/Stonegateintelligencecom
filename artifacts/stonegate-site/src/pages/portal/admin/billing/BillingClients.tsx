@@ -8,16 +8,19 @@ interface BillingClient {
   id: number; name: string; primaryContact: string | null; email: string | null;
   phone: string | null; address: string | null; billingContact: string | null;
   billingEmail: string | null; defaultRate: string | null; paymentTerms: string | null;
-  notes: string | null; isActive: boolean; createdAt: string;
+  notes: string | null; isActive: boolean; createdAt: string; linkedPortalUserId: number | null;
 }
+interface PortalUser { id: number; fullName: string; email: string; }
 
 const EMPTY = {
   name: "", primaryContact: "", email: "", phone: "", address: "",
   billingContact: "", billingEmail: "", defaultRate: "", paymentTerms: "", notes: "",
+  linkedPortalUserId: "",
 };
 
 export default function BillingClients() {
   const [clients, setClients] = useState<BillingClient[]>([]);
+  const [portalUsers, setPortalUsers] = useState<PortalUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showActive, setShowActive] = useState<"all" | "active" | "inactive">("all");
@@ -28,9 +31,13 @@ export default function BillingClients() {
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
 
   const load = () =>
-    fetch(`${BASE}/api/portal/billing/clients`, { credentials: "include" })
-      .then(r => r.json()).then(d => setClients(Array.isArray(d) ? d : []))
-      .finally(() => setLoading(false));
+    Promise.all([
+      fetch(`${BASE}/api/portal/billing/clients`, { credentials: "include" }).then(r => r.json()),
+      fetch(`${BASE}/api/portal/admin/clients`, { credentials: "include" }).then(r => r.json()),
+    ]).then(([bc, pu]) => {
+      setClients(Array.isArray(bc) ? bc : []);
+      setPortalUsers(Array.isArray(pu) ? pu.map((u: any) => ({ id: u.id, fullName: u.fullName ?? u.name, email: u.email })) : []);
+    }).finally(() => setLoading(false));
 
   useEffect(() => { load(); }, []);
 
@@ -50,6 +57,7 @@ export default function BillingClients() {
       phone: c.phone ?? "", address: c.address ?? "", billingContact: c.billingContact ?? "",
       billingEmail: c.billingEmail ?? "", defaultRate: c.defaultRate ?? "",
       paymentTerms: c.paymentTerms ?? "", notes: c.notes ?? "",
+      linkedPortalUserId: c.linkedPortalUserId ? String(c.linkedPortalUserId) : "",
     });
     setEditing(c); setCreating(false);
   };
@@ -60,7 +68,11 @@ export default function BillingClients() {
       ? `${BASE}/api/portal/billing/clients/${editing.id}`
       : `${BASE}/api/portal/billing/clients`;
     const method = editing ? "PATCH" : "POST";
-    const body = { ...form, defaultRate: form.defaultRate ? parseFloat(form.defaultRate) : null };
+    const body = {
+      ...form,
+      defaultRate: form.defaultRate ? parseFloat(form.defaultRate) : null,
+      linkedPortalUserId: form.linkedPortalUserId ? Number(form.linkedPortalUserId) : null,
+    };
     const res = await fetch(url, { method, credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     if (res.ok) { setEditing(null); setCreating(false); load(); }
     setSaving(false);
@@ -190,6 +202,16 @@ export default function BillingClients() {
                 <label className="block text-xs tracking-[0.12em] uppercase text-muted-foreground mb-1.5">Notes</label>
                 <textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} rows={3}
                   className="w-full bg-black border border-white/15 rounded px-3 py-2.5 text-sm text-foreground focus:outline-none focus:border-primary/60 transition-colors resize-none" />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-xs tracking-[0.12em] uppercase text-muted-foreground mb-1.5">
+                  Link to Portal Client <span className="normal-case text-muted-foreground/50">(optional — enables Billing & Time tab on client detail)</span>
+                </label>
+                <select value={form.linkedPortalUserId} onChange={e => setForm(p => ({ ...p, linkedPortalUserId: e.target.value }))}
+                  className="w-full bg-black border border-white/15 rounded px-3 py-2.5 text-sm text-foreground focus:outline-none focus:border-primary/60 transition-colors">
+                  <option value="">Not linked</option>
+                  {portalUsers.map(u => <option key={u.id} value={u.id}>{u.fullName} ({u.email})</option>)}
+                </select>
               </div>
             </div>
             <div className="flex justify-end gap-3 px-6 py-4 border-t border-white/8">
