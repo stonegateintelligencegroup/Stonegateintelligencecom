@@ -9,6 +9,18 @@ export interface HealthStatus {
   status: string;
 }
 
+/**
+ * @nullable
+ */
+export type ContactInquiryClientType = typeof ContactInquiryClientType[keyof typeof ContactInquiryClientType] | null;
+
+
+export const ContactInquiryClientType = {
+  individual: 'individual',
+  attorney: 'attorney',
+  business: 'business',
+} as const;
+
 export interface ContactInquiry {
   /** @minLength 1 */
   fullName: string;
@@ -18,6 +30,8 @@ export interface ContactInquiry {
   email: string;
   /** @minLength 1 */
   caseSummary: string;
+  /** @nullable */
+  clientType?: ContactInquiryClientType;
   /** @nullable */
   preferredContact?: string | null;
   /** @nullable */

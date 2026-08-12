@@ -40,6 +40,13 @@ export default function BillingStatementForm() {
   const isEdit = matchEdit && paramsEdit?.id;
   const editId = isEdit ? Number(paramsEdit.id) : null;
 
+  // ── URL params from "Ready to Invoice" quick-link ─────────────────────────
+  const _qp = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : new URLSearchParams();
+  const preClientId  = _qp.get("preClientId") ?? "";
+  const preEngId     = _qp.get("preEngId") ?? "";
+  const preselectIds = (_qp.get("preselect") ?? "").split(",").map(Number).filter(Boolean);
+  const initEntryStatus = _qp.get("entryStatus") ?? "unbilled";
+
   const today = new Date().toISOString().split("T")[0];
   const defaultPeriod = new Date().toLocaleString("en-US", { month: "long", year: "numeric" });
 
@@ -51,15 +58,16 @@ export default function BillingStatementForm() {
   const [entriesLoaded, setEntriesLoaded] = useState(false);
   const [selectedEntries, setSelectedEntries] = useState<Set<number>>(new Set());
   // Separate filter state for the Time Entries tab (independent from the Details selectors)
-  const [entryClientId, setEntryClientId] = useState("");
-  const [entryEngagementId, setEntryEngagementId] = useState("");
+  const [entryClientId, setEntryClientId] = useState(preClientId);
+  const [entryEngagementId, setEntryEngagementId] = useState(preEngId);
+  const [entryStatus] = useState(initEntryStatus); // status filter for available entries
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
-  const [activeTab, setActiveTab] = useState<"details" | "items" | "entries">("details");
+  const [activeTab, setActiveTab] = useState<"details" | "items" | "entries">(preselectIds.length > 0 ? "entries" : "details");
 
   // Form state
-  const [billingClientId, setBillingClientId] = useState("");
-  const [engagementId, setEngagementId] = useState("");
+  const [billingClientId, setBillingClientId] = useState(preClientId);
+  const [engagementId, setEngagementId] = useState(preEngId);
   const [portalUserId, setPortalUserId] = useState("");
   const [billingPeriod, setBillingPeriod] = useState(defaultPeriod);
   const [billingPeriodStart, setBillingPeriodStart] = useState("");
@@ -136,15 +144,24 @@ export default function BillingStatementForm() {
       if (eid) params.set("engagementId", eid);
       const url = editId
         ? `${BASE}/api/portal/billing/statements/${editId}/available-time-entries?${params}`
-        : `${BASE}/api/portal/billing/time-entries?${params}&billingStatus=unbilled`;
-      const res = await fetch(url, { credentials: "include" }).then(r => r.json());
-      setAvailableEntries(Array.isArray(res) ? res : []);
+        : `${BASE}/api/portal/billing/time-entries?${params}&billingStatus=${entryStatus}`;
+      const loaded: TimeEntry[] = await fetch(url, { credentials: "include" }).then(r => r.json()).then(r => Array.isArray(r) ? r : []);
+      setAvailableEntries(loaded);
+      // Pre-select entries specified via URL param (from "Ready to Invoice" quick-link)
+      if (preselectIds.length > 0) {
+        const loadedIdSet = new Set(loaded.map(e => e.id));
+        setSelectedEntries(new Set(preselectIds.filter(id => loadedIdSet.has(id))));
+      }
     } catch {
       setAvailableEntries([]);
     } finally {
       setLoadingEntries(false);
     }
   };
+
+  // Auto-load entries on mount when arriving from "Ready to Invoice" quick-link
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { if (preselectIds.length > 0 && !editId) loadEntries(preClientId, preEngId); }, []);
 
   // Import selected time entries as line items
   const importEntries = () => {
@@ -528,7 +545,10 @@ export default function BillingStatementForm() {
           </div>
 
           <p className="text-xs text-muted-foreground mb-4">
-            Select unbilled time entries to import as line items. <strong>Investigator names and internal details are never exposed to clients.</strong>
+            Select time entries to import as line items. <strong>Investigator names and internal details are never exposed to clients.</strong>
+            {entryStatus !== "unbilled" && (
+              <span className="ml-2 text-blue-400">Showing <em>{entryStatus.replace(/_/g, " ")}</em> entries.</span>
+            )}
           </p>
 
           {!entriesLoaded ? (
@@ -539,7 +559,7 @@ export default function BillingStatementForm() {
             <p className="text-sm text-muted-foreground">Loading…</p>
           ) : availableEntries.length === 0 ? (
             <div className="border border-white/10 rounded-lg p-8 text-center text-muted-foreground text-sm">
-              No unbilled time entries found{entryClientId ? " for the selected client" : ""}. Try selecting a different client or changing the engagement filter.
+              No {entryStatus.replace(/_/g, " ")} entries found{entryClientId ? " for the selected client" : ""}. Try selecting a different client or changing the engagement filter.
             </div>
           ) : (
             <div className="border border-white/10 rounded-lg overflow-hidden">

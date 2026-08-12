@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { ContactInquiryClientType } from './contactInquiryClientType';
 
 export interface ContactInquiry {
   /** @minLength 1 */
@@ -15,6 +16,8 @@ export interface ContactInquiry {
   email: string;
   /** @minLength 1 */
   caseSummary: string;
+  /** @nullable */
+  clientType?: ContactInquiryClientType;
   /** @nullable */
   preferredContact?: string | null;
   /** @nullable */

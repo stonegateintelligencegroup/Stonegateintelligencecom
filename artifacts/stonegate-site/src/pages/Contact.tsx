@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/select';
 
 const formSchema = z.object({
+  clientType: z.string().min(1, 'Please select a client type'),
   fullName: z.string().min(2, 'Full name is required'),
   phone: z.string().min(10, 'Valid phone number is required'),
   email: z.string().email('Valid email address is required'),
@@ -34,6 +35,12 @@ const formSchema = z.object({
   preferredContact: z.string().optional(),
   bestTime: z.string().optional(),
 });
+
+const CLIENT_TYPES = [
+  { value: "individual", icon: "👤", label: "Individual", desc: "Private individual seeking personal investigative or research services" },
+  { value: "attorney",   icon: "⚖️", label: "Attorney / Law Firm", desc: "Attorney or law firm seeking litigation support, due diligence, or investigative assistance" },
+  { value: "business",   icon: "🏢", label: "Company",   desc: "Corporation, LLC, or other business entity seeking intelligence or investigative services" },
+];
 
 export default function Contact() {
   const [isSuccess, setIsSuccess] = useState(false);
@@ -43,6 +50,7 @@ export default function Contact() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      clientType: '',
       fullName: '',
       phone: '',
       email: '',
@@ -52,16 +60,20 @@ export default function Contact() {
     },
   });
 
+  const selectedClientType = form.watch("clientType");
+
   function onSubmit(values: z.infer<typeof formSchema>) {
     submitContact.mutate({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       data: {
         fullName: values.fullName,
         phone: values.phone,
         email: values.email,
         caseSummary: values.caseSummary,
+        clientType: values.clientType || null,
         preferredContact: values.preferredContact || null,
         bestTime: values.bestTime || null,
-      }
+      } as any
     }, {
       onSuccess: () => {
         setIsSuccess(true);
@@ -130,6 +142,41 @@ export default function Contact() {
 
                   <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+
+                      {/* Client type cards */}
+                      <div>
+                        <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1">
+                          I am contacting Stonegate as a… <span className="text-primary">*</span>
+                        </p>
+                        <p className="text-xs text-muted-foreground/50 mb-3">Select the option that best describes you.</p>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          {CLIENT_TYPES.map(ct => (
+                            <button
+                              key={ct.value}
+                              type="button"
+                              onClick={() => form.setValue("clientType", ct.value, { shouldValidate: true })}
+                              className={`relative text-left p-4 rounded border-2 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary/40 ${
+                                selectedClientType === ct.value
+                                  ? "border-primary bg-primary/8 shadow-[0_0_0_1px_rgba(192,57,43,0.1)]"
+                                  : "border-white/10 bg-background hover:border-white/25 hover:bg-white/4"
+                              }`}
+                            >
+                              {selectedClientType === ct.value && (
+                                <div className="absolute top-3 right-3 w-4 h-4 rounded-full bg-primary flex items-center justify-center">
+                                  <Shield className="w-2.5 h-2.5 text-white" />
+                                </div>
+                              )}
+                              <span className="block text-xl mb-2">{ct.icon}</span>
+                              <span className="block text-sm font-semibold text-foreground mb-1">{ct.label}</span>
+                              <span className="block text-xs text-muted-foreground/60 leading-relaxed">{ct.desc}</span>
+                            </button>
+                          ))}
+                        </div>
+                        {form.formState.errors.clientType && (
+                          <p className="text-xs text-destructive mt-2">{form.formState.errors.clientType.message}</p>
+                        )}
+                      </div>
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <FormField
                           control={form.control}

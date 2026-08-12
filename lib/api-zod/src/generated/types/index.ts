@@ -7,6 +7,7 @@
  */
 
 export * from './contactInquiry';
+export * from './contactInquiryClientType';
 export * from './contactResponse';
 export * from './errorResponse';
 export * from './healthStatus';

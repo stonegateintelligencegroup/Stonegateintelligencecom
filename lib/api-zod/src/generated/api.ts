@@ -32,6 +32,7 @@ export const SubmitContactBody = zod.object({
   "phone": zod.string().min(1),
   "email": zod.string().min(1),
   "caseSummary": zod.string().min(1),
+  "clientType": zod.union([zod.literal('individual'),zod.literal('attorney'),zod.literal('business'),zod.literal(null)]).nullish(),
   "preferredContact": zod.string().nullish(),
   "bestTime": zod.string().nullish()
 })

@@ -86,6 +86,9 @@ components:
         caseSummary:
           type: string
           minLength: 1
+        clientType:
+          type: ["string", "null"]
+          enum: ["individual", "attorney", "business", null]
         preferredContact:
           type: ["string", "null"]
         bestTime:

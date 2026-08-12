@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useLocation } from "wouter";
-import { Plus, Download, ChevronUp, ChevronDown, Pencil, Copy, Trash2 } from "lucide-react";
+import { Plus, Download, ChevronUp, ChevronDown, Pencil, Copy, Trash2, FileText } from "lucide-react";
 import BillingLayout from "./BillingLayout";
 import TimeEntryModal from "./TimeEntryModal";
 
@@ -309,9 +309,27 @@ export default function BillingTimeEntries() {
                     {e.billable && e.billableAmount ? `$${parseFloat(e.billableAmount).toFixed(2)}` : <span className="text-muted-foreground">—</span>}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <span className={`text-xs px-2 py-0.5 rounded border ${STATUS_COLOR[e.billingStatus] ?? STATUS_COLOR.unbilled}`}>
-                      {e.billingStatus.replace(/_/g, " ")}
-                    </span>
+                    {e.billingStatus === "ready_to_invoice" ? (
+                      <button
+                        title="Create invoice for this entry"
+                        onClick={() => {
+                          const q = new URLSearchParams({
+                            preClientId: String(e.clientId),
+                            preselect: String(e.id),
+                            entryStatus: "ready_to_invoice",
+                          });
+                          if (e.engagementId) q.set("preEngId", String(e.engagementId));
+                          setLocation(`/portal/admin/billing/statements/new?${q}`);
+                        }}
+                        className={`text-xs px-2 py-0.5 rounded border transition-all hover:ring-1 hover:ring-blue-400/50 hover:bg-blue-400/20 cursor-pointer flex items-center gap-1 ${STATUS_COLOR.ready_to_invoice}`}
+                      >
+                        ready to invoice <FileText className="w-3 h-3 opacity-70" />
+                      </button>
+                    ) : (
+                      <span className={`text-xs px-2 py-0.5 rounded border ${STATUS_COLOR[e.billingStatus] ?? STATUS_COLOR.unbilled}`}>
+                        {e.billingStatus.replace(/_/g, " ")}
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1">

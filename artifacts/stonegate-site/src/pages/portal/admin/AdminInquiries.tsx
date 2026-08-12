@@ -37,7 +37,7 @@ const STATUS_COLORS: Record<string, string> = {
   closed: "text-muted-foreground bg-white/5 border-white/10",
 };
 const CLIENT_TYPE: Record<string, string> = {
-  individual: "Individual", attorney: "Attorney / Law Firm", business: "Business / Corporation",
+  individual: "Individual", attorney: "Attorney / Law Firm", business: "Company",
 };
 const SERVICE_LABELS: Record<string, string> = {
   investigative: "Investigative services", intelligence: "Intelligence consulting",

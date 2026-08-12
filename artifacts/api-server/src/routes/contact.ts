@@ -27,11 +27,18 @@ function checkRateLimit(ip: string): boolean {
   return true;
 }
 
+const CLIENT_TYPE_LABEL: Record<string, string> = {
+  individual: "Individual",
+  attorney: "Attorney / Law Firm",
+  business: "Company",
+};
+
 function buildEmailHtml(fields: {
   fullName: string;
   email: string;
   phone: string;
   caseSummary: string;
+  clientType?: string | null;
   preferredContact?: string | null;
   bestTime?: string | null;
   submittedAt: string;
@@ -70,6 +77,7 @@ function buildEmailHtml(fields: {
               ${row("Full Name", fields.fullName)}
               ${row("Email Address", fields.email)}
               ${row("Phone Number", fields.phone)}
+              ${fields.clientType ? row("Client Type", CLIENT_TYPE_LABEL[fields.clientType] ?? fields.clientType) : ""}
               ${row("Preferred Contact", fields.preferredContact)}
               ${row("Best Time to Reach", fields.bestTime)}
               ${row("Case Summary", fields.caseSummary)}
@@ -107,6 +115,7 @@ function buildEmailText(fields: {
   email: string;
   phone: string;
   caseSummary: string;
+  clientType?: string | null;
   preferredContact?: string | null;
   bestTime?: string | null;
   submittedAt: string;
@@ -121,6 +130,9 @@ function buildEmailText(fields: {
     `Phone Number:       ${fields.phone}`,
   ];
 
+  if (fields.clientType) {
+    lines.push(`Client Type:        ${CLIENT_TYPE_LABEL[fields.clientType] ?? fields.clientType}`);
+  }
   if (fields.preferredContact) {
     lines.push(`Preferred Contact:  ${fields.preferredContact}`);
   }
@@ -165,7 +177,7 @@ router.post("/contact", async (req, res): Promise<void> => {
     return;
   }
 
-  const { fullName, phone, email, caseSummary, preferredContact, bestTime } =
+  const { fullName, phone, email, caseSummary, clientType, preferredContact, bestTime } =
     parsed.data;
 
   // Basic email format validation
@@ -182,6 +194,7 @@ router.post("/contact", async (req, res): Promise<void> => {
       phone,
       email,
       caseSummary,
+      clientType: clientType ?? null,
       preferredContact: preferredContact ?? null,
       bestTime: bestTime ?? null,
     })
@@ -215,8 +228,9 @@ router.post("/contact", async (req, res): Promise<void> => {
       email,
       phone,
       caseSummary,
-      preferredContact,
-      bestTime,
+      clientType: clientType ?? null,
+      preferredContact: preferredContact ?? null,
+      bestTime: bestTime ?? null,
       submittedAt,
     };
 
