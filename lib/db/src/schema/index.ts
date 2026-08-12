@@ -20,3 +20,4 @@
 export * from "./contacts";
 export * from "./portal";
 export * from "./intake";
+export * from "./billing";

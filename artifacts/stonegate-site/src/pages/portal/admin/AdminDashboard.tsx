@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
-import { Users, LogOut, Plus, Trash2, ChevronRight, FileText } from "lucide-react";
+import { Users, LogOut, Plus, Trash2, ChevronRight, FileText, Clock } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -97,9 +97,23 @@ export default function AdminDashboard() {
             <span className="text-white/20">·</span>
             <span className="text-sm text-foreground">{user?.name}</span>
           </div>
-          <button onClick={handleLogout} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors">
-            <LogOut className="w-3.5 h-3.5" /> Sign Out
-          </button>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setLocation("/portal/admin/billing")}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+            >
+              <Clock className="w-3.5 h-3.5" /> Billable Hours
+            </button>
+            <button
+              onClick={() => setLocation("/portal/admin/inquiries")}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+            >
+              <FileText className="w-3.5 h-3.5" /> Inquiries
+            </button>
+            <button onClick={handleLogout} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors">
+              <LogOut className="w-3.5 h-3.5" /> Sign Out
+            </button>
+          </div>
         </div>
       </div>
 

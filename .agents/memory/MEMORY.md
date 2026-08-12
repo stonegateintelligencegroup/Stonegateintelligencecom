@@ -1,2 +1,3 @@
 - [Client Portal Architecture](portal-architecture.md) — session auth, DB tables, storage quirks, codegen gotcha with api-zod types
 - [Intake Form Architecture](intake-architecture.md) — multi-step public intake form, DB schema, admin inquiry view, email notification pattern
+- [Billing System Architecture](billing-architecture.md) — billing tables, API routes, drizzle-kit push workaround, billing increment logic
