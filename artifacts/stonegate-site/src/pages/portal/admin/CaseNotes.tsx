@@ -39,6 +39,8 @@ export default function CaseNotes({ caseId }: { caseId: number; adminId: number 
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [confirmDeleteNoteId, setConfirmDeleteNoteId] = useState<number | null>(null);
+  const [confirmDeleteFolderId, setConfirmDeleteFolderId] = useState<number | null>(null);
 
   const [showNewFolder, setShowNewFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
@@ -159,7 +161,6 @@ export default function CaseNotes({ caseId }: { caseId: number; adminId: number 
   };
 
   const handleDelete = async (noteId: number) => {
-    if (!confirm("Delete this note? This cannot be undone.")) return;
     setError("");
     try {
       const res = await fetch(`${BASE}/api/portal/admin/case-notes/${noteId}`, {
@@ -171,6 +172,8 @@ export default function CaseNotes({ caseId }: { caseId: number; adminId: number 
       if (openNoteId === noteId) closeNote();
     } catch {
       setError("Network error — could not delete.");
+    } finally {
+      setConfirmDeleteNoteId(null);
     }
   };
 
@@ -196,7 +199,6 @@ export default function CaseNotes({ caseId }: { caseId: number; adminId: number 
   };
 
   const handleDeleteFolder = async (folderId: number) => {
-    if (!confirm("Delete this folder? Notes inside will become unfiled.")) return;
     setError("");
     try {
       const res = await fetch(`${BASE}/api/portal/admin/folders/${folderId}`, {
@@ -209,6 +211,8 @@ export default function CaseNotes({ caseId }: { caseId: number; adminId: number 
       if (selectedFolder === folderId) setSelectedFolder("all");
     } catch {
       setError("Network error — could not delete folder.");
+    } finally {
+      setConfirmDeleteFolderId(null);
     }
   };
 
@@ -270,11 +274,24 @@ export default function CaseNotes({ caseId }: { caseId: number; adminId: number 
                     <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.name}</span>
                     <span style={{ fontSize: 10, opacity: 0.5 }}>{count}</span>
                   </button>
-                  <button onClick={() => handleDeleteFolder(f.id)}
-                    style={{ padding: "0 8px", background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", flexShrink: 0 }}
-                    className="opacity-0 group-hover:opacity-100">
-                    <Trash2 size={11} />
-                  </button>
+                  {confirmDeleteFolderId === f.id ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "0 4px", flexShrink: 0 }}>
+                      <button onClick={() => handleDeleteFolder(f.id)}
+                        style={{ fontSize: 9, background: "rgba(185,28,28,0.3)", color: "#f87171", border: "none", borderRadius: 3, padding: "2px 5px", cursor: "pointer" }}>
+                        Del
+                      </button>
+                      <button onClick={() => setConfirmDeleteFolderId(null)}
+                        style={{ fontSize: 9, background: "none", color: "var(--muted-foreground)", border: "none", cursor: "pointer" }}>
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <button onClick={() => setConfirmDeleteFolderId(f.id)}
+                      style={{ padding: "0 8px", background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", flexShrink: 0 }}
+                      className="opacity-0 group-hover:opacity-100">
+                      <Trash2 size={11} />
+                    </button>
+                  )}
                 </div>
               );
             })}
@@ -355,18 +372,31 @@ export default function CaseNotes({ caseId }: { caseId: number; adminId: number 
                         </div>
                       </div>
                     </button>
-                    {/* Edit + Delete actions — visible on row hover, pointer-events off when hidden */}
-                    <div className="opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto"
-                      style={{ position: "absolute", top: "50%", right: 8, transform: "translateY(-50%)", display: "flex", gap: 2, transition: "opacity 0.15s" }}>
-                      <button onClick={e => { e.stopPropagation(); openNote(note); }} title="Edit"
-                        style={{ padding: "4px 5px", background: "rgba(0,0,0,0.6)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 3, cursor: "pointer", color: "var(--muted-foreground)", display: "flex", alignItems: "center" }}>
-                        <Pencil size={10} />
-                      </button>
-                      <button onClick={e => { e.stopPropagation(); handleDelete(note.id); }} title="Delete"
-                        style={{ padding: "4px 5px", background: "rgba(0,0,0,0.6)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 3, cursor: "pointer", color: "var(--muted-foreground)", display: "flex", alignItems: "center" }}>
-                        <Trash2 size={10} />
-                      </button>
-                    </div>
+                    {/* Edit + Delete actions — visible on row hover */}
+                    {confirmDeleteNoteId === note.id ? (
+                      <div style={{ position: "absolute", top: "50%", right: 8, transform: "translateY(-50%)", display: "flex", alignItems: "center", gap: 4 }}>
+                        <button onClick={e => { e.stopPropagation(); handleDelete(note.id); }}
+                          style={{ fontSize: 9, background: "rgba(185,28,28,0.3)", color: "#f87171", border: "none", borderRadius: 3, padding: "3px 6px", cursor: "pointer" }}>
+                          Delete
+                        </button>
+                        <button onClick={e => { e.stopPropagation(); setConfirmDeleteNoteId(null); }}
+                          style={{ fontSize: 9, background: "none", color: "var(--muted-foreground)", border: "none", cursor: "pointer", padding: "2px 3px" }}>
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto"
+                        style={{ position: "absolute", top: "50%", right: 8, transform: "translateY(-50%)", display: "flex", gap: 2, transition: "opacity 0.15s" }}>
+                        <button onClick={e => { e.stopPropagation(); openNote(note); }} title="Edit"
+                          style={{ padding: "4px 5px", background: "rgba(0,0,0,0.6)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 3, cursor: "pointer", color: "var(--muted-foreground)", display: "flex", alignItems: "center" }}>
+                          <Pencil size={10} />
+                        </button>
+                        <button onClick={e => { e.stopPropagation(); setConfirmDeleteNoteId(note.id); }} title="Delete"
+                          style={{ padding: "4px 5px", background: "rgba(0,0,0,0.6)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 3, cursor: "pointer", color: "var(--muted-foreground)", display: "flex", alignItems: "center" }}>
+                          <Trash2 size={10} />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 );
               })
@@ -404,10 +434,24 @@ export default function CaseNotes({ caseId }: { caseId: number; adminId: number 
                     style={{ background: "rgba(192,57,43,0.2)", color: "var(--primary)", border: "none", borderRadius: 4, padding: "5px 10px", fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", cursor: saving ? "wait" : "pointer", opacity: saving ? 0.5 : 1 }}>
                     {saving ? "Saving…" : "Save"}
                   </button>
-                  <button onClick={() => handleDelete(openNote_.id)}
-                    style={{ background: "none", border: "none", color: "var(--muted-foreground)", cursor: "pointer", padding: 2 }}>
-                    <Trash2 size={13} />
-                  </button>
+                  {confirmDeleteNoteId === openNote_.id ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <button onClick={() => handleDelete(openNote_.id)}
+                        style={{ fontSize: 10, background: "rgba(185,28,28,0.3)", color: "#f87171", border: "1px solid rgba(185,28,28,0.4)", borderRadius: 4, padding: "4px 8px", cursor: "pointer" }}>
+                        Delete
+                      </button>
+                      <button onClick={() => setConfirmDeleteNoteId(null)}
+                        style={{ fontSize: 10, background: "none", color: "var(--muted-foreground)", border: "none", cursor: "pointer" }}>
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button onClick={() => setConfirmDeleteNoteId(openNote_.id)}
+                      style={{ background: "none", border: "none", color: "var(--muted-foreground)", cursor: "pointer", padding: 2 }}
+                      title="Delete note">
+                      <Trash2 size={13} />
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -417,7 +461,9 @@ export default function CaseNotes({ caseId }: { caseId: number; adminId: number 
                 value={editTitle}
                 onChange={e => setEditTitle(e.target.value)}
                 placeholder="Note title"
-                style={{ padding: "18px 20px 6px", background: "transparent", border: "none", fontSize: 15, fontFamily: "var(--font-serif, serif)", color: "var(--foreground)", outline: "none", flexShrink: 0, width: "100%", boxSizing: "border-box" }}
+                onFocus={e => (e.currentTarget.style.borderBottomColor = "rgba(192,57,43,0.5)")}
+                onBlur={e => (e.currentTarget.style.borderBottomColor = "transparent")}
+                style={{ padding: "18px 20px 6px", background: "transparent", border: "none", borderBottom: "1px solid transparent", fontSize: 15, fontFamily: "var(--font-serif, serif)", color: "var(--foreground)", outline: "none", flexShrink: 0, width: "100%", boxSizing: "border-box", cursor: "text", transition: "border-color 0.15s" }}
               />
 
               {/* Body */}
