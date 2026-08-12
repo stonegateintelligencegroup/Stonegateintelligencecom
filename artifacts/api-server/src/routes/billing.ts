@@ -107,12 +107,13 @@ router.get("/clients", async (req: Request, res: Response) => {
 // POST /api/portal/billing/clients
 router.post("/clients", async (req: Request, res: Response) => {
   const { name, primaryContact, email, phone, address, billingContact,
-          billingEmail, defaultRate, paymentTerms, notes } = req.body;
+          billingEmail, defaultRate, paymentTerms, notes, linkedPortalUserId } = req.body;
   if (!name) { res.status(400).json({ error: "name is required." }); return; }
 
   const [row] = await db.insert(billingClientsTable).values({
     name, primaryContact, email, phone, address, billingContact,
     billingEmail, defaultRate: defaultRate?.toString(), paymentTerms, notes,
+    linkedPortalUserId: linkedPortalUserId ? Number(linkedPortalUserId) : null,
   }).returning();
 
   await writeAudit(req, "create", "billing_client", row.id, null, row);
@@ -126,7 +127,7 @@ router.patch("/clients/:id", async (req: Request, res: Response) => {
   if (!before) { res.status(404).json({ error: "Client not found." }); return; }
 
   const { name, primaryContact, email, phone, address, billingContact,
-          billingEmail, defaultRate, paymentTerms, notes, isActive } = req.body;
+          billingEmail, defaultRate, paymentTerms, notes, isActive, linkedPortalUserId } = req.body;
 
   const [updated] = await db.update(billingClientsTable).set({
     ...(name !== undefined && { name }),
@@ -140,6 +141,7 @@ router.patch("/clients/:id", async (req: Request, res: Response) => {
     ...(paymentTerms !== undefined && { paymentTerms }),
     ...(notes !== undefined && { notes }),
     ...(isActive !== undefined && { isActive }),
+    ...(linkedPortalUserId !== undefined && { linkedPortalUserId: linkedPortalUserId ? Number(linkedPortalUserId) : null }),
     updatedAt: new Date(),
   }).where(eq(billingClientsTable.id, id)).returning();
 
