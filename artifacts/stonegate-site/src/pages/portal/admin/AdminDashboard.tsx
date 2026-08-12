@@ -161,13 +161,18 @@ export default function AdminDashboard() {
                           <div className="min-w-0 w-44 shrink-0">
                             <p className="text-sm font-medium text-foreground truncate">{client.name}</p>
                             <p className="text-xs text-muted-foreground truncate">{client.email}</p>
-                            <span className={`inline-block mt-1.5 text-xs px-2 py-0.5 rounded border ${
-                              client.isActive
-                                ? "text-green-400 border-green-400/30 bg-green-400/10"
-                                : "text-yellow-400 border-yellow-400/30 bg-yellow-400/10"
-                            }`}>
-                              {client.isActive ? "Active" : "Invite Pending"}
-                            </span>
+                            {(() => {
+                              const allClosed = clientCases.length > 0 && clientCases.every(c => c.status === "closed");
+                              if (allClosed) return (
+                                <span className="inline-block mt-1.5 text-xs px-2 py-0.5 rounded border text-red-400 border-red-400/30 bg-red-400/10">Closed</span>
+                              );
+                              if (client.isActive) return (
+                                <span className="inline-block mt-1.5 text-xs px-2 py-0.5 rounded border text-green-400 border-green-400/30 bg-green-400/10">Active</span>
+                              );
+                              return (
+                                <span className="inline-block mt-1.5 text-xs px-2 py-0.5 rounded border text-yellow-400 border-yellow-400/30 bg-yellow-400/10">Invite Pending</span>
+                              );
+                            })()}
                           </div>
 
                           {/* Cases + inquiry */}
