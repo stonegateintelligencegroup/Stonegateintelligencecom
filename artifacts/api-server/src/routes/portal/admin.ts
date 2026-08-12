@@ -10,7 +10,7 @@ import {
   portalCaseNotesTable,
   intakeSubmissionsTable,
 } from "@workspace/db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import { requireAdmin } from "../../middlewares/auth";
 import { Resend } from "resend";
 
@@ -217,6 +217,7 @@ router.post("/cases", async (req: Request, res: Response) => {
 // PATCH /api/portal/admin/cases/:id
 router.patch("/cases/:id", async (req: Request, res: Response) => {
   const { status, assignedInvestigator, notes } = req.body;
+  const caseId = Number(req.params.id);
 
   const [updated] = await db
     .update(portalCasesTable)
@@ -226,12 +227,54 @@ router.patch("/cases/:id", async (req: Request, res: Response) => {
       ...(notes !== undefined && { notes }),
       lastUpdate: new Date(),
     })
-    .where(eq(portalCasesTable.id, Number(req.params.id)))
+    .where(eq(portalCasesTable.id, caseId))
     .returning();
 
   if (!updated) {
     res.status(404).json({ error: "Case not found." });
     return;
+  }
+
+  // Sync case-level notes into the "Client Notes" folder as a dedicated note
+  if (notes !== undefined) {
+    const noteContent = (notes ?? "").trim();
+
+    // Find or create the "Client Notes" folder
+    let [clientFolder] = await db
+      .select()
+      .from(portalNoteFoldersTable)
+      .where(and(eq(portalNoteFoldersTable.caseId, caseId), eq(portalNoteFoldersTable.name, "Client Notes")));
+
+    if (!clientFolder && noteContent) {
+      [clientFolder] = await db
+        .insert(portalNoteFoldersTable)
+        .values({ caseId, name: "Client Notes" })
+        .returning();
+    }
+
+    if (clientFolder) {
+      // Find an existing pinned "Case Details" note in that folder
+      const [existing] = await db
+        .select()
+        .from(portalCaseNotesTable)
+        .where(and(eq(portalCaseNotesTable.folderId, clientFolder.id), eq(portalCaseNotesTable.title, "Case Details")));
+
+      if (noteContent) {
+        if (existing) {
+          await db
+            .update(portalCaseNotesTable)
+            .set({ content: noteContent, updatedAt: new Date() })
+            .where(eq(portalCaseNotesTable.id, existing.id));
+        } else {
+          await db
+            .insert(portalCaseNotesTable)
+            .values({ caseId, folderId: clientFolder.id, authorId: req.session.userId!, title: "Case Details", content: noteContent });
+        }
+      } else if (existing) {
+        // Notes cleared — remove the client-facing entry
+        await db.delete(portalCaseNotesTable).where(eq(portalCaseNotesTable.id, existing.id));
+      }
+    }
   }
 
   res.json(updated);
