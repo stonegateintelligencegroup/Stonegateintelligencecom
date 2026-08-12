@@ -1028,7 +1028,7 @@ router.post("/statements/:id/items", async (req: Request, res: Response) => {
       showQuantity: showQuantity !== false,
       showRate: showRate !== false,
       sortOrder: sortOrder ?? 0,
-      timeEntryIds: timeEntryIds ? JSON.stringify(timeEntryIds) : "[]",
+      timeEntryIds: Array.isArray(timeEntryIds) ? timeEntryIds.map(Number) : [],
     })
     .returning();
 
@@ -1063,7 +1063,7 @@ router.patch("/statements/:id/items/:itemId", async (req: Request, res: Response
   if (showQuantity !== undefined) updates.showQuantity = showQuantity;
   if (showRate !== undefined) updates.showRate = showRate;
   if (sortOrder !== undefined) updates.sortOrder = sortOrder;
-  if (timeEntryIds !== undefined) updates.timeEntryIds = JSON.stringify(timeEntryIds);
+  if (timeEntryIds !== undefined) updates.timeEntryIds = Array.isArray(timeEntryIds) ? timeEntryIds.map(Number) : [];
 
   const [item] = await db
     .update(billingStatementItemsTable)

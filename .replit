@@ -1,4 +1,4 @@
-modules = ["nodejs-24"]
+modules = ["nodejs-24", "python-base-3.13", "postgresql-16"]
 
 [deployment]
 router = "application"
@@ -24,3 +24,6 @@ timeoutMs = 20000
 [userenv.shared]
 ADMIN_EMAIL = "Monica.morgado@stonegateintelligence.com"
 ADMIN_NAME = "Monica Morgado "
+
+[nix]
+channel = "stable-25_05"

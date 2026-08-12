@@ -108,7 +108,7 @@ export default function BillingStatementForm() {
             id: i.id, description: i.description, servicePeriod: i.servicePeriod ?? "",
             quantity: i.quantity ?? "", rate: i.rate ?? "", amount: i.amount ?? "0",
             showQuantity: i.showQuantity !== false, showRate: i.showRate !== false,
-            sortOrder: i.sortOrder ?? 0, timeEntryIds: i.timeEntryIds ? JSON.parse(i.timeEntryIds) : [], _key: uid(),
+            sortOrder: i.sortOrder ?? 0, timeEntryIds: Array.isArray(i.timeEntryIds) ? i.timeEntryIds : [], _key: uid(),
           })));
         }
       });

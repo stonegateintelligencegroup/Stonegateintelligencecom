@@ -215,7 +215,7 @@ export const billingStatementItemsTable = pgTable("billing_statement_items", {
   showQuantity: boolean("show_quantity").notNull().default(true),
   showRate: boolean("show_rate").notNull().default(true),
   sortOrder: integer("sort_order").notNull().default(0),
-  timeEntryIds: text("time_entry_ids").default("[]"),                // JSON array — internal only
+  timeEntryIds: integer("time_entry_ids").array().default([]),        // integer[] — internal only
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
