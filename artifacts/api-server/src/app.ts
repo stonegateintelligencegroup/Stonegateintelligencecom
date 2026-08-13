@@ -12,6 +12,11 @@ const PgSession = connectPgSimple(session);
 
 const app: Express = express();
 
+// Trust the Replit reverse proxy so req.secure reflects HTTPS correctly.
+// Without this, express-session won't set Secure cookies in production,
+// causing every request after login to return 401.
+app.set("trust proxy", 1);
+
 app.use(
   pinoHttp({
     logger,
