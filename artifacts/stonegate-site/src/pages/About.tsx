@@ -80,16 +80,10 @@ export default function About() {
               Our team brings a diverse background in investigative services, legal support, corporate security, surveillance analysis, and intelligence research.
             </motion.p>
             <motion.p variants={fadeIn}>
-              The foundation of our experience includes work involving investigative processes, accountability efforts, legal procedures, case support, evidence review, and information analysis. Our team has developed a strong understanding of how to locate information, evaluate details, identify patterns, document findings, and support informed decision-making.
+              Our experience includes corporate fraud and loss prevention operations involving the review and analysis of extensive video evidence, incident documentation, data research, and risk identification across multi-location environments.
             </motion.p>
             <motion.p variants={fadeIn}>
-              Our experience includes corporate surveillance and loss prevention operations involving the review and analysis of extensive video evidence, incident documentation, research, and risk identification across multi-location environments.
-            </motion.p>
-            <motion.p variants={fadeIn}>
-              By combining investigative knowledge, legal awareness, analytical research, and technology-driven intelligence methods, Stonegate Intelligence Group approaches each matter with discretion, professionalism, and a commitment to accurate, evidence-based findings.
-            </motion.p>
-            <motion.p variants={fadeIn}>
-              Our mission is to provide clients with reliable information, actionable insights, and a clear understanding of the facts surrounding complex situations.
+              By combining investigative knowledge, legal awareness, analytical research, and technology driven intelligence methods, Stonegate Intelligence Group approaches each matter with discretion, professionalism, and a commitment to accurate, evidence-based findings.
             </motion.p>
           </motion.div>
         </div>
