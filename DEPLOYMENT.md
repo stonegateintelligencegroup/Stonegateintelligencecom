@@ -8,6 +8,11 @@ The public Vite site is built from `artifacts/stonegate-site` and deployed by
 file for `stonegateintelligence.com`, and the production build uses `/` as its
 base path for the custom domain.
 
+The temporary migration page is available at
+`https://stonegateintelligence.com/under-construction`. It does not replace the
+public homepage; it can be used as a temporary landing page during a future
+cutover if desired.
+
 GitHub Pages hosts the static public pages only. It cannot run the Express API,
 Postgres database, sessions, portal authentication, or object storage. The
 portal source remains in this repository but is intentionally not imported or

@@ -42,10 +42,14 @@ jobs:
           VITE_BASE_PATH: /
           VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
 
+      - name: Configure Pages artifact
+        uses: actions/configure-pages@v5
+
       - name: Add SPA fallback
         run: |
           cp artifacts/stonegate-site/dist/public/index.html artifacts/stonegate-site/dist/public/404.html
           touch artifacts/stonegate-site/dist/public/.nojekyll
+          cp CNAME artifacts/stonegate-site/dist/public/CNAME
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
