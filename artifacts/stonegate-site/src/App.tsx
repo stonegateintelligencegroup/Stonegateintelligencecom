@@ -1,4 +1,5 @@
 import { TooltipProvider } from '@/components/ui/tooltip';
+import CookieBanner from '@/components/CookieBanner';
 import NotFound from '@/pages/not-found';
 import { Route, Switch } from 'wouter';
 
@@ -40,6 +41,7 @@ function App() {
     <TooltipProvider>
       <CookieConsentProvider>
         <Router />
+        <CookieBanner />
       </CookieConsentProvider>
     </TooltipProvider>
   );
