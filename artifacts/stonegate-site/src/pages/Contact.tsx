@@ -4,7 +4,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Mail, Phone, Globe, User, Shield } from 'lucide-react';
-import { useSubmitContact } from '@workspace/api-client-react';
 import { useCookieConsent } from '@/context/CookieConsentContext';
 import { trackEvent } from '@/lib/analytics';
 
@@ -44,7 +43,6 @@ const CLIENT_TYPES = [
 
 export default function Contact() {
   const [isSuccess, setIsSuccess] = useState(false);
-  const submitContact = useSubmitContact();
   const { status: consentStatus } = useCookieConsent();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -63,26 +61,27 @@ export default function Contact() {
   const selectedClientType = form.watch("clientType");
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    submitContact.mutate({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      data: {
-        fullName: values.fullName,
-        phone: values.phone,
-        email: values.email,
-        caseSummary: values.caseSummary,
-        clientType: values.clientType || null,
-        preferredContact: values.preferredContact || null,
-        bestTime: values.bestTime || null,
-      } as any
-    }, {
-      onSuccess: () => {
-        setIsSuccess(true);
-        form.reset();
-        if (consentStatus === 'accepted') {
-          trackEvent('contact_form_submitted');
-        }
-      }
-    });
+    const subject = `Consultation request from ${values.fullName}`;
+    const body = [
+      `Name: ${values.fullName}`,
+      `Phone: ${values.phone}`,
+      `Email: ${values.email}`,
+      `Client type: ${values.clientType}`,
+      `Preferred contact: ${values.preferredContact || 'Not specified'}`,
+      `Best time: ${values.bestTime || 'Not specified'}`,
+      '',
+      'Case summary:',
+      values.caseSummary,
+    ].join('\n');
+
+    window.location.href =
+      `mailto:Monica.Morgado@stonegateintelligence.com?subject=${encodeURIComponent(subject)}` +
+      `&body=${encodeURIComponent(body)}`;
+    setIsSuccess(true);
+    form.reset();
+    if (consentStatus === 'accepted') {
+      trackEvent('contact_form_submitted');
+    }
   }
 
   const fadeIn = {
@@ -125,21 +124,15 @@ export default function Contact() {
                   <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-6">
                     <Shield className="w-8 h-8 text-primary" />
                   </div>
-                  <h3 className="font-serif text-2xl font-bold mb-4">Request Received</h3>
+                  <h3 className="font-serif text-2xl font-bold mb-4">Your Email Is Ready</h3>
                   <p className="text-muted-foreground leading-relaxed">
-                    Thank you for contacting Stonegate Intelligence Group. Your request has been received and will be reviewed confidentially. We will be in touch shortly.
+                    Your email application should have opened with your consultation details. Send the message to complete your request, or contact us directly by phone or email.
                   </p>
                 </div>
               ) : (
                 <div className="bg-card border border-white/5 p-8 md:p-10">
                   <h2 className="font-serif text-2xl font-bold mb-8 text-foreground border-b border-white/10 pb-4">Secure Intake Form</h2>
                   
-                  {submitContact.isError && (
-                    <div className="mb-8 p-4 bg-destructive/10 border border-destructive/50 text-destructive text-sm">
-                      There was an error submitting your request. Please try again or contact us directly.
-                    </div>
-                  )}
-
                   <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
 
@@ -278,10 +271,9 @@ export default function Contact() {
 
                       <button 
                         type="submit" 
-                        disabled={submitContact.isPending}
                         className="w-full bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 uppercase tracking-widest text-sm font-semibold transition-all disabled:opacity-50 mt-4"
                       >
-                        {submitContact.isPending ? "Submitting..." : "Submit Secure Request"}
+                        Open Email to Submit
                       </button>
                     </form>
                   </Form>
@@ -354,4 +346,3 @@ export default function Contact() {
     </div>
   );
 }
-

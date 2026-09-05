@@ -13,22 +13,11 @@ The temporary migration page is available at
 public homepage; it can be used as a temporary landing page during a future
 cutover if desired.
 
-GitHub Pages hosts the static public pages only. It cannot run the Express API,
-Postgres database, sessions, portal authentication, or object storage. The
-portal source remains in this repository but is intentionally not imported or
-registered by the public frontend.
-
-## Public API configuration
-
-When the API is hosted separately, set the repository Actions variable
-`VITE_API_BASE_URL` and pass it to the build step. The frontend uses this value
-for public contact submissions. The API should set `PUBLIC_APP_URL` to the
-deployed public site URL and provide its own database, session, email, and
-Google Cloud Storage credentials.
-
-Without a separately hosted API, the static marketing pages still work, but
-contact form submissions require the API to be deployed before they can be
-processed.
+This repository now contains only the public storefront. It is a static Vite
+site and does not require Express, Node.js at runtime, PostgreSQL, Drizzle,
+authentication, sessions, or an API server. The consultation form opens a
+pre-filled email in the visitor's mail application so it works without a
+backend.
 
 ## DNS configuration
 
@@ -42,10 +31,3 @@ records:
 
 Then add `stonegateintelligence.com` under **Settings > Pages > Custom domain**
 and enable HTTPS after DNS finishes propagating.
-
-## Alternative
-
-Cloudflare Pages is the better single-provider option if the API is migrated to
-Cloudflare Workers and the database/storage services are moved to compatible
-free-tier providers. The current Express/Postgres backend is not directly
-deployable to GitHub Pages or Cloudflare Pages as-is.
