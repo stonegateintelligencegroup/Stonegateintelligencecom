@@ -53,9 +53,14 @@ jobs:
       - name: Add SPA fallback
         if: github.event_name != 'pull_request'
         run: |
-          cp artifacts/stonegate-site/dist/public/index.html artifacts/stonegate-site/dist/public/404.html
-          touch artifacts/stonegate-site/dist/public/.nojekyll
-          cp CNAME artifacts/stonegate-site/dist/public/CNAME
+          output_dir="artifacts/stonegate-site/dist/public"
+          cp "$output_dir/index.html" "$output_dir/404.html"
+          for route in about services contact privacy under-construction; do
+            mkdir -p "$output_dir/$route"
+            cp "$output_dir/index.html" "$output_dir/$route/index.html"
+          done
+          touch "$output_dir/.nojekyll"
+          cp CNAME "$output_dir/CNAME"
 
       - name: Upload Pages artifact
         if: github.event_name != 'pull_request'
