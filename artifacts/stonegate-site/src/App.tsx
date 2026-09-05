@@ -1,6 +1,6 @@
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
-import { Route, Switch, Router as WouterRouter } from 'wouter';
+import { Route, Switch } from 'wouter';
 
 import Shell from '@/components/layout/Shell';
 import ScrollToTop from '@/components/ScrollToTop';
@@ -36,9 +36,7 @@ function App() {
   return (
     <TooltipProvider>
       <CookieConsentProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-          <Router />
-        </WouterRouter>
+        <Router />
       </CookieConsentProvider>
     </TooltipProvider>
   );
