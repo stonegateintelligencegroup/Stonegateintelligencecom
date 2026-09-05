@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -35,6 +38,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
+      - name: Typecheck public site
+        run: pnpm --filter @workspace/stonegate-site typecheck
+
       - name: Build public site
         run: pnpm --filter @workspace/stonegate-site build
         env:
@@ -55,6 +61,7 @@ jobs:
           path: artifacts/stonegate-site/dist/public
 
   deploy:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
