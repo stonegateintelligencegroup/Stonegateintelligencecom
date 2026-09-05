@@ -5,6 +5,7 @@ import { Route, Switch } from 'wouter';
 import Shell from '@/components/layout/Shell';
 import ScrollToTop from '@/components/ScrollToTop';
 import { CookieConsentProvider } from '@/context/CookieConsentContext';
+import { useGAPageTracking } from '@/hooks/useGAPageTracking';
 
 import Home from '@/pages/Home';
 import About from '@/pages/About';
@@ -14,6 +15,8 @@ import Privacy from '@/pages/Privacy';
 import UnderConstruction from '@/pages/UnderConstruction';
 
 function Router() {
+  useGAPageTracking();
+
   return (
     <Shell>
       <ScrollToTop />
