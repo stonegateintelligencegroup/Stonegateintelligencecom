@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Shield, Search, FileSearch, HardDrive, Briefcase, Scale, Target } from 'lucide-react';
+import { Shield, Briefcase, Scale } from 'lucide-react';
 import { Link } from 'wouter';
 import { useCookieConsent } from '@/context/CookieConsentContext';
 import { trackEvent } from '@/lib/analytics';
@@ -21,39 +21,61 @@ export default function Services() {
 
   const services = [
     {
-      title: "Private Investigations",
-      icon: Search,
-      desc: "Discreet, thorough, and highly professional investigative services tailored to individuals facing complex personal or legal challenges. We uncover hidden truths, locate individuals, and gather actionable intelligence."
-    },
-    {
-      title: "Background Research",
-      icon: Target,
-      desc: "Comprehensive vetting of individuals prior to critical personal or professional decisions. We go beyond basic database checks to uncover historical patterns, undisclosed liabilities, and character insights."
-    },
-    {
-      title: "Due Diligence",
-      icon: FileSearch,
-      desc: "Deep-dive analysis into corporate entities, potential partners, or investment targets. We identify financial, legal, and reputational risks before they become liabilities."
-    },
-    {
-      title: "Evidence Collection & Documentation",
-      icon: Shield,
-      desc: "Meticulous gathering and preservation of physical, documentary, and digital evidence. We ensure chain of custody is maintained so our findings withstand legal scrutiny."
-    },
-    {
-      title: "Digital Research",
-      icon: HardDrive,
-      desc: "Advanced open-source intelligence (OSINT) gathering and digital footprint analysis. We navigate the deep web, social media ecosystems, and public records to build comprehensive digital profiles."
-    },
-    {
-      title: "Corporate Intelligence",
+      title: "For Businesses",
       icon: Briefcase,
-      desc: "Strategic information gathering for business continuity and competitive advantage. Includes internal investigations, intellectual property protection, and executive vetting."
+      desc: "Business intelligence, loss-analysis, and investigative research focused on determining where money is being lost, why it is happening, and what the evidence supports.",
+      items: [
+        "Inventory shrinkage investigation",
+        "Root-cause analysis of financial and operational losses",
+        "Profit & loss, cash flow, and financial statement analysis",
+        "Profitability and margin analysis",
+        "Expense and cost anomaly identification",
+        "Inventory, purchasing, waste, and operational loss analysis",
+        "Internal process and control assessment",
+        "Pattern and trend analysis",
+        "Evidence-based operational investigations",
+        "Loss-prevention and process-improvement recommendations"
+      ]
     },
     {
-      title: "Legal Support Services",
+      title: "For Attorneys",
       icon: Scale,
-      desc: "Dedicated support for attorneys and law firms. From witness locating and interviewing to asset tracing and litigation intelligence, we build the factual foundation for your legal strategy."
+      desc: "Investigative research and fact development supporting counsel through documented facts, record analysis, identified inconsistencies, and investigative intelligence.",
+      items: [
+        "Investigative fact development",
+        "Financial and business-record analysis",
+        "Litigation-support research",
+        "Document and information review",
+        "Chronology and timeline development",
+        "Discrepancy and anomaly identification",
+        "Corporate and business intelligence research",
+        "Background and subject research",
+        "Open-source intelligence research",
+        "Asset and financial research",
+        "Investigative lead development",
+        "Fact verification"
+      ]
+    },
+    {
+      title: "For Insurance Professionals",
+      icon: Shield,
+      desc: "Claims investigation, loss-analysis, and financial research helping claims professionals understand what happened, why the loss occurred, what documentation supports, and the potential exposure.",
+      items: [
+        "Claims-related investigative research",
+        "Loss-cause investigation",
+        "Loss and damage investigation",
+        "Financial-loss analysis",
+        "Business interruption research",
+        "P&L and cash-flow analysis",
+        "Inventory loss and shrinkage analysis",
+        "Documentation and record verification",
+        "Timeline and chronology development",
+        "Anomaly and inconsistency identification",
+        "Open-source intelligence research",
+        "Background and subject research",
+        "Claim-related fact development",
+        "Identification of issues requiring additional investigation"
+      ]
     }
   ];
 
@@ -69,7 +91,7 @@ export default function Services() {
             </h1>
             <div className="w-16 h-1 bg-primary mx-auto mb-8" />
             <p className="text-xl text-muted-foreground leading-relaxed">
-              Targeted methodologies to resolve complex inquiries.
+              Every question deserves an answer grounded in evidence.
             </p>
           </motion.div>
         </div>
@@ -100,7 +122,15 @@ export default function Services() {
                   <service.icon className="w-6 h-6 text-secondary group-hover:text-primary transition-colors" />
                 </div>
                 <h3 className="font-serif text-2xl font-bold mb-4">{service.title}</h3>
-                <p className="text-muted-foreground leading-relaxed flex-1">{service.desc}</p>
+                <p className="text-muted-foreground leading-relaxed mb-8">{service.desc}</p>
+                <ul className="space-y-3 text-sm text-muted-foreground">
+                  {service.items.map((item) => (
+                    <li key={item} className="flex gap-3">
+                      <span className="text-primary mt-1">◆</span>
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
               </motion.div>
             ))}
           </motion.div>
