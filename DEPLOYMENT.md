@@ -4,7 +4,9 @@
 
 The public Vite site is built from `artifacts/stonegate-site` and deployed by
 `.github/workflows/deploy-pages.yml`. In the repository settings, set
-**Pages > Source** to **GitHub Actions**.
+**Pages > Source** to **GitHub Actions**. The repository includes a `CNAME`
+file for `stonegateintelligence.com`, and the production build uses `/` as its
+base path for the custom domain.
 
 GitHub Pages hosts the static public pages only. It cannot run the Express API,
 Postgres database, sessions, portal authentication, or object storage. The
@@ -22,6 +24,19 @@ Google Cloud Storage credentials.
 Without a separately hosted API, the static marketing pages still work, but
 contact form submissions require the API to be deployed before they can be
 processed.
+
+## DNS configuration
+
+At your DNS provider, point the apex domain to GitHub Pages using these
+records:
+
+- `A` records for `185.199.108.153`, `185.199.109.153`,
+  `185.199.110.153`, and `185.199.111.153`
+- An optional `CNAME` for `www` pointing to
+  `stonegateintelligencegroup.github.io`
+
+Then add `stonegateintelligence.com` under **Settings > Pages > Custom domain**
+and enable HTTPS after DNS finishes propagating.
 
 ## Alternative
 
