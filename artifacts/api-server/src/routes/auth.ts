@@ -110,10 +110,7 @@ router.post("/auth/forgot-password", async (req: Request, res: Response) => {
     .set({ inviteToken: resetToken, inviteTokenExpiry: resetTokenExpiry })
     .where(eq(portalUsersTable.id, user.id));
 
-  const domain =
-    process.env.REPLIT_DEV_DOMAIN
-      ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-      : "https://stonegateintelligence.com";
+  const domain = process.env.PUBLIC_APP_URL ?? "https://stonegateintelligence.com";
   const resetUrl = `${domain}/portal/reset-password/${resetToken}`;
 
   await resend.emails.send({

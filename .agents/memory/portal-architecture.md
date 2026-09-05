@@ -21,8 +21,8 @@ description: Session-based auth, DB tables, file storage, and key quirks for the
 - `portal_sessions` — auto-created by connect-pg-simple
 
 ## File storage
-- Replit Object Storage (GCS-backed); storage route at `artifacts/api-server/src/routes/storage.ts`
-- Auth check uses `req.session?.userId` (NOT Replit Auth's `req.isAuthenticated()`)
+- Google Cloud Storage; storage route at `artifacts/api-server/src/routes/storage.ts`
+- Auth check uses `req.session?.userId`
 - Zod imports removed from storage route — template used `@workspace/api-zod` types that were wiped by codegen; replaced with inline manual validation
 
 **Why:** The openapi codegen wipes and regenerates `lib/api-zod/src/generated/api.ts` on every run. Any types not defined in `lib/api-spec/openapi.yaml` will disappear after codegen. Storage types were pre-generated; do not re-add them to the spec or the codegen will create duplicates.

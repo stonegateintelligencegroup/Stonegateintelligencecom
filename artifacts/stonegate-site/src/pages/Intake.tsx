@@ -1,8 +1,8 @@
 import { useState } from "react";
+import { API_BASE_URL } from "@/lib/api";
 import { Link, useLocation } from "wouter";
 import { ChevronRight, Check, AlertCircle, ArrowLeft, ArrowRight, Pencil } from "lucide-react";
 
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const TODAY = new Date().toISOString().split("T")[0];
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -188,7 +188,7 @@ export default function Intake() {
     setSubmitting(true);
     setSubmitError("");
     try {
-      const res = await fetch(`${BASE}/api/intake`, {
+      const res = await fetch(`${API_BASE_URL}/api/intake`, {
         method: "POST", credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

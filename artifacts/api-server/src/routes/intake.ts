@@ -65,9 +65,7 @@ function buildNotificationEmail(sub: {
     flexible: "Flexible / no set deadline",
   };
 
-  const adminUrl = process.env.REPLIT_DEV_DOMAIN
-    ? `https://${process.env.REPLIT_DEV_DOMAIN}/portal/admin/inquiries`
-    : "https://stonegateintelligence.com/portal/admin/inquiries";
+  const adminUrl = `${process.env.PUBLIC_APP_URL ?? "https://stonegateintelligence.com"}/portal/admin/inquiries`;
 
   const portalRow = sub.portalClientName
     ? `<tr><td style="padding:10px 16px;font-weight:600;color:#1a1a1a;width:180px;border-bottom:1px solid #f0f0f0;font-family:Arial,sans-serif;font-size:13px;">Portal Client</td><td style="padding:10px 16px;color:#333;border-bottom:1px solid #f0f0f0;font-family:Arial,sans-serif;font-size:13px;">${sub.portalClientName} ✓</td></tr>`

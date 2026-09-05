@@ -46,10 +46,10 @@ export default function Footer() {
           </div>
           
           <div>
-            <h4 className="font-sans text-sm tracking-[0.2em] text-secondary uppercase mb-6">Client Access</h4>
+            <h4 className="font-sans text-sm tracking-[0.2em] text-secondary uppercase mb-6">Contact</h4>
             <ul className="space-y-3 text-sm text-muted-foreground">
-              <li><Link href="/portal" className="hover:text-primary transition-colors">Secure Client Portal</Link></li>
               <li><Link href="/contact" className="hover:text-primary transition-colors">Request Consultation</Link></li>
+              <li><Link href="/privacy" className="hover:text-primary transition-colors">Privacy</Link></li>
             </ul>
           </div>
         </div>

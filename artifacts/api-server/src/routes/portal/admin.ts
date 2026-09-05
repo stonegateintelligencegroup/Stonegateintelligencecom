@@ -80,9 +80,7 @@ router.post("/clients", async (req: Request, res: Response) => {
     paymentTerms: "30",
   });
 
-  const domain = process.env.REPLIT_DEV_DOMAIN
-    ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-    : "https://stonegateintelligence.com";
+  const domain = process.env.PUBLIC_APP_URL ?? "https://stonegateintelligence.com";
   const inviteUrl = `${domain}/portal/invite/${inviteToken}`;
 
   const intakeUrl = `${domain}/portal/intake`;

@@ -17,7 +17,7 @@ conflict with existing ones — it tries to prompt for rename/create decisions.
 **Workaround:** run raw SQL via `node -e "const {Pool} = require('pg')…"` to
 create tables directly when `drizzle-kit push` can't run in CI/non-TTY.
 
-**Why:** The Replit shell environment is non-interactive; drizzle-kit 0.31.x
+**Why:** The deployment shell environment is non-interactive; drizzle-kit 0.31.x
 requires a real TTY for its tablesResolver interactive prompt.
 
 **How to apply:** Any future migration that adds new tables should use the raw
