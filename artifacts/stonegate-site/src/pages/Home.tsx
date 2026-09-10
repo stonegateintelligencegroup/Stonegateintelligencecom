@@ -22,7 +22,7 @@ export default function Home() {
   return (
     <div className="w-full flex flex-col">
       {/* Hero Section */}
-      <section className="relative bg-black min-h-screen flex flex-col items-center justify-start pt-20">
+      <section className="relative bg-black flex flex-col items-center justify-start pt-20">
         <motion.img
           src={logo}
           alt="Stonegate Intelligence Group"
@@ -38,6 +38,29 @@ export default function Home() {
           </p>
           <div className="w-full h-px bg-primary" />
         </div>
+      </section>
+
+      {/* Introduction Video */}
+      <section className="bg-black px-4 pt-5 pb-12 md:px-8 md:pt-5 md:pb-16 border-t border-white/5">
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-80px" }}
+          variants={fadeIn}
+          className="mx-auto w-full max-w-3xl overflow-hidden border border-primary/40 bg-card p-1 shadow-[0_0_32px_rgba(220,20,60,0.14)]"
+        >
+          <video
+            className="aspect-[806/512] w-full bg-black object-cover"
+            controls
+            playsInline
+            preload="metadata"
+            poster="/media/stonegate-introduction-poster.jpg"
+            aria-label="Stonegate Intelligence Group introduction video"
+          >
+            <source src="/media/stonegate-introduction.mp4" type="video/mp4" />
+            Your browser does not support embedded video.
+          </video>
+        </motion.div>
       </section>
 
       {/* Who We Are */}
