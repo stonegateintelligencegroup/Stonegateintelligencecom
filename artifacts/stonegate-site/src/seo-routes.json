@@ -1,0 +1,50 @@
+[
+  {
+    "path": "/",
+    "title": "Stonegate Intelligence Group | Investigative & Intelligence Services",
+    "description": "Stonegate Intelligence Group provides confidential investigative services, intelligence consulting, due diligence, digital research, and evidence-based solutions.",
+    "canonical": "https://stonegateintelligence.com/",
+    "robots": "index, follow",
+    "includeInSitemap": true
+  },
+  {
+    "path": "/about",
+    "title": "About Stonegate Intelligence Group | Experience & Values",
+    "description": "Learn about Stonegate Intelligence Group's experience, mission, and commitment to confidential, accurate, evidence-based intelligence services.",
+    "canonical": "https://stonegateintelligence.com/about/",
+    "robots": "index, follow",
+    "includeInSitemap": true
+  },
+  {
+    "path": "/services",
+    "title": "Investigative & Intelligence Services | Stonegate Intelligence Group",
+    "description": "Explore confidential investigative, due diligence, litigation support, risk intelligence, and digital research services for businesses, attorneys, and insurers.",
+    "canonical": "https://stonegateintelligence.com/services/",
+    "robots": "index, follow",
+    "includeInSitemap": true
+  },
+  {
+    "path": "/contact",
+    "title": "Request a Consultation | Stonegate Intelligence Group",
+    "description": "Contact Stonegate Intelligence Group to discuss a confidential investigation, due diligence matter, litigation support need, or intelligence consultation.",
+    "canonical": "https://stonegateintelligence.com/contact/",
+    "robots": "index, follow",
+    "includeInSitemap": true
+  },
+  {
+    "path": "/privacy",
+    "title": "Privacy Policy | Stonegate Intelligence Group",
+    "description": "Read the Stonegate Intelligence Group privacy policy, including how website analytics, cookies, contact information, and data choices are handled.",
+    "canonical": "https://stonegateintelligence.com/privacy/",
+    "robots": "index, follow",
+    "includeInSitemap": true
+  },
+  {
+    "path": "/under-construction",
+    "title": "Site Updates | Stonegate Intelligence Group",
+    "description": "Stonegate Intelligence Group is preparing improvements to its public website while remaining available for confidential consultations.",
+    "canonical": "https://stonegateintelligence.com/under-construction/",
+    "robots": "noindex, follow",
+    "includeInSitemap": false
+  }
+]

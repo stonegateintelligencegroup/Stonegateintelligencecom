@@ -1,5 +1,6 @@
 import { TooltipProvider } from '@/components/ui/tooltip';
 import CookieBanner from '@/components/CookieBanner';
+import RouteMetadata from '@/components/RouteMetadata';
 import NotFound from '@/pages/not-found';
 import { Route, Switch } from 'wouter';
 
@@ -20,6 +21,7 @@ function Router() {
 
   return (
     <Shell>
+      <RouteMetadata />
       <ScrollToTop />
       <Switch>
         {/* Public pages */}

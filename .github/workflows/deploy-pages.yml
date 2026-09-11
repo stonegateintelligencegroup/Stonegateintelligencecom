@@ -50,15 +50,10 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: actions/configure-pages@v5
 
-      - name: Add SPA fallback
+      - name: Configure static hosting files
         if: github.event_name != 'pull_request'
         run: |
           output_dir="artifacts/stonegate-site/dist/public"
-          cp "$output_dir/index.html" "$output_dir/404.html"
-          for route in about services contact privacy under-construction; do
-            mkdir -p "$output_dir/$route"
-            cp "$output_dir/index.html" "$output_dir/$route/index.html"
-          done
           touch "$output_dir/.nojekyll"
           cp CNAME "$output_dir/CNAME"
 
