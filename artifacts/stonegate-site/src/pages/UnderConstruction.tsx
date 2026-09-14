@@ -45,7 +45,7 @@ export default function UnderConstruction() {
         </div>
 
         <Link
-          href="/contact"
+          href="/contact/"
           className="mt-10 inline-flex items-center gap-3 bg-primary px-7 py-4 text-sm font-semibold uppercase tracking-[0.2em] text-primary-foreground transition-colors hover:bg-primary/90"
         >
           Request a Consultation

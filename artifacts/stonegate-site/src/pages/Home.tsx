@@ -33,9 +33,9 @@ export default function Home() {
         />
         <div className="flex flex-col items-center gap-3 mt-4">
           <div className="w-full h-px bg-primary" />
-          <p className="font-sans text-white text-sm tracking-[0.15em] uppercase whitespace-nowrap">
+          <h1 className="font-sans text-white text-sm tracking-[0.15em] uppercase whitespace-nowrap">
             Intelligence &nbsp;·&nbsp; Insight &nbsp;·&nbsp; Impact
-          </p>
+          </h1>
           <div className="w-full h-px bg-primary" />
         </div>
       </section>
@@ -134,7 +134,7 @@ export default function Home() {
               Our mission is to deliver reliable intelligence, research, and analytical services that empower clients to make informed decisions. We are committed to developing objective facts, providing clear insight, and maintaining the highest standards of discretion, integrity, and professional excellence.
             </p>
             <div className="mt-12">
-              <Link href="/about" className="inline-flex items-center gap-2 text-primary hover:text-white transition-colors uppercase tracking-widest text-sm font-semibold">
+              <Link href="/about/" className="inline-flex items-center gap-2 text-primary hover:text-white transition-colors uppercase tracking-widest text-sm font-semibold">
                 Read More About Us <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
@@ -160,13 +160,13 @@ export default function Home() {
             </p>
             <div className="flex flex-col sm:flex-row gap-6 justify-center">
               <Link
-                href="/contact"
+                href="/contact/"
                 className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 uppercase tracking-widest text-sm font-semibold transition-all shadow-[0_0_20px_rgba(220,20,60,0.3)] hover:shadow-[0_0_30px_rgba(220,20,60,0.5)] border border-primary text-center"
               >
                 Request a Confidential Consultation
               </Link>
               <Link
-                href="/services"
+                href="/services/"
                 className="bg-transparent hover:bg-white/5 text-foreground border border-white/20 px-8 py-4 uppercase tracking-widest text-sm font-semibold transition-all text-center"
               >
                 Learn Our Services

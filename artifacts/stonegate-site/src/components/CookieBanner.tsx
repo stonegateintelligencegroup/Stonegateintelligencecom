@@ -22,7 +22,7 @@ export default function CookieBanner() {
           We use analytics cookies to understand how visitors use our site.
           Your data stays anonymous and is never sold.{' '}
           <a
-            href="/privacy"
+            href="/privacy/"
             className="underline underline-offset-2 hover:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 rounded"
           >
             Privacy policy

@@ -150,7 +150,7 @@ export default function Privacy() {
             <p>
               For privacy-related questions or to exercise your rights, please reach out via our{' '}
               <a
-                href="/contact"
+                href="/contact/"
                 className="underline underline-offset-2 hover:text-white"
               >
                 contact page

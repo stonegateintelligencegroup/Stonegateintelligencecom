@@ -6,9 +6,9 @@ import logo from '@assets/IMG_2051_1784854999049.jpeg';
 
 const links = [
   { href: '/', label: 'Home' },
-  { href: '/about', label: 'About' },
-  { href: '/services', label: 'Services' },
-  { href: '/contact', label: 'Contact' },
+  { href: '/about/', label: 'About' },
+  { href: '/services/', label: 'Services' },
+  { href: '/contact/', label: 'Contact' },
 ];
 
 export default function Navbar() {

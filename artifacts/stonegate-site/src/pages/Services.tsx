@@ -146,7 +146,7 @@ export default function Services() {
               Every engagement is customized to the specific needs of the client.
             </p>
             <Link 
-              href="/contact" 
+              href="/contact/"
               className="inline-block bg-white text-black hover:bg-gray-200 px-8 py-4 uppercase tracking-widest text-sm font-semibold transition-colors"
             >
               Discuss Your Case
