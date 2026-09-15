@@ -4,7 +4,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Mail, Phone, Globe, User, Shield } from 'lucide-react';
-import { useCookieConsent } from '@/context/CookieConsentContext';
 import { trackEvent } from '@/lib/analytics';
 
 import {
@@ -43,7 +42,6 @@ const CLIENT_TYPES = [
 
 export default function Contact() {
   const [isSuccess, setIsSuccess] = useState(false);
-  const { status: consentStatus } = useCookieConsent();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -74,14 +72,16 @@ export default function Contact() {
       values.caseSummary,
     ].join('\n');
 
+    trackEvent('email_lead_click', {
+      contact_method: 'email',
+      link_location: 'contact_form',
+    });
+
     window.location.href =
       `mailto:Monica.Morgado@stonegateintelligence.com?subject=${encodeURIComponent(subject)}` +
       `&body=${encodeURIComponent(body)}`;
     setIsSuccess(true);
     form.reset();
-    if (consentStatus === 'accepted') {
-      trackEvent('contact_form_submitted');
-    }
   }
 
   const fadeIn = {
@@ -315,7 +315,16 @@ export default function Contact() {
                       <Mail className="w-5 h-5 text-primary mt-1 shrink-0" />
                       <div>
                         <p className="font-bold text-foreground">Email</p>
-                        <a href="mailto:Monica.Morgado@stonegateintelligence.com" className="text-sm text-muted-foreground hover:text-primary transition-colors break-all">
+                        <a
+                          href="mailto:Monica.Morgado@stonegateintelligence.com"
+                          onClick={() =>
+                            trackEvent('email_lead_click', {
+                              contact_method: 'email',
+                              link_location: 'contact_details',
+                            })
+                          }
+                          className="text-sm text-muted-foreground hover:text-primary transition-colors break-all"
+                        >
                           Monica.Morgado@stonegateintelligence.com
                         </a>
                       </div>

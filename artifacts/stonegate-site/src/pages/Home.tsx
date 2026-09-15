@@ -2,8 +2,10 @@ import { Link } from 'wouter';
 import { motion } from 'framer-motion';
 import { Shield, Lock, Search, Scale, FileText, ArrowRight } from 'lucide-react';
 import logo from '@assets/IMG_2051_1784854999049.jpeg';
+import { useHTML5VideoAnalytics } from '@/hooks/useHTML5VideoAnalytics';
 
 export default function Home() {
+  const videoAnalytics = useHTML5VideoAnalytics();
   const fadeIn = {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: "easeOut" as const } }
@@ -56,6 +58,9 @@ export default function Home() {
             preload="metadata"
             poster="/media/stonegate-introduction-poster.jpg"
             aria-label="Stonegate Intelligence Group introduction video"
+            onPlay={videoAnalytics.onPlay}
+            onTimeUpdate={videoAnalytics.onTimeUpdate}
+            onEnded={videoAnalytics.onEnded}
           >
             <source src="/media/stonegate-introduction.mp4" type="video/mp4" />
             Your browser does not support embedded video.

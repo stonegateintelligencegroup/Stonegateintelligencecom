@@ -1,12 +1,7 @@
 import { useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { useCookieConsent } from '@/context/CookieConsentContext';
-
-declare global {
-  interface Window {
-    gtag?: (...args: unknown[]) => void;
-  }
-}
+import { trackEvent } from '@/lib/analytics';
 
 /**
  * Fires a GA4 page_view event on every wouter route change,
@@ -20,14 +15,19 @@ export function useGAPageTracking() {
 
   useEffect(() => {
     if (status !== 'accepted') return;
-    try {
-      if (typeof window.gtag === 'function') {
-        window.gtag('event', 'page_view', {
-          page_path: location,
-        });
-      }
-    } catch {
-      // analytics failures must never break the site
-    }
+
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) return;
+      trackEvent('page_view', {
+        page_location: window.location.href,
+        page_path: `${window.location.pathname}${window.location.search}`,
+        page_title: document.title,
+      });
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [location, status]);
 }

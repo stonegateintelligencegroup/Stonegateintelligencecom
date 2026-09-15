@@ -9,7 +9,7 @@ export default function Privacy() {
         <h1 className="mb-2 text-3xl font-semibold tracking-tight text-white">
           Privacy Policy
         </h1>
-        <p className="mb-10 text-sm text-stone-500">Last updated: July 31, 2026</p>
+        <p className="mb-10 text-sm text-stone-500">Last updated: September 15, 2026</p>
 
         <section className="space-y-8 text-sm leading-relaxed text-stone-300">
 
@@ -19,54 +19,52 @@ export default function Privacy() {
               Stonegate Intelligence Group ("Stonegate", "we", "us", or "our") provides
               strategic intelligence and advisory services. This policy explains how we
               collect, use, and protect information when you visit{' '}
-              <span className="text-stone-200">stonegateig.com</span>.
+              <span className="text-stone-200">stonegateintelligence.com</span>.
             </p>
           </div>
 
           <div>
             <h2 className="mb-3 text-lg font-medium text-white">Analytics data we collect</h2>
             <p className="mb-3">
-              We use <strong className="text-stone-200">Google Analytics 4 (GA4)</strong> and{' '}
-              <strong className="text-stone-200">Microsoft Clarity</strong> to understand how
-              visitors use our site. These tools collect:
+              We use <strong className="text-stone-200">Google Analytics 4 (GA4)</strong> to
+              understand how visitors use our production website. GA4 may collect:
             </p>
             <ul className="ml-4 list-disc space-y-1">
               <li>Pages visited and time spent on each page</li>
               <li>Referring website or search engine</li>
               <li>General geographic region (country / city — not precise location)</li>
               <li>Device type, operating system, and browser</li>
-              <li>Anonymised interaction events (button clicks, form submissions)</li>
+              <li>Consent-approved interaction events, such as navigation, video milestones, and email-contact intent</li>
             </ul>
             <p className="mt-3">
-              Analytics data is <strong className="text-stone-200">fully anonymised</strong> —
-              IP addresses are masked before storage and no personally identifiable information
-              is included. We never sell, share, or rent this data to third parties.
+              We use this information for aggregate reporting and website improvement. We do not
+              intentionally send names, email addresses, phone numbers, case summaries, or other
+              contact-form contents to GA4. The production site does not use Microsoft Clarity,
+              session replay, or heatmap tracking.
             </p>
           </div>
 
           <div>
             <h2 className="mb-3 text-lg font-medium text-white">Cookies</h2>
             <p className="mb-3">
-              Analytics cookies are only set <em>after</em> you click "Accept analytics" in the
-              consent banner. If you decline, no analytics cookies are placed and no tracking
-              occurs during your visit.
+              Analytics cookies are only set <em>after</em> you click "Allow analytics" in the
+              consent banner. If you decline or later turn analytics off, analytics storage is
+              denied and the site stops sending analytics events.
             </p>
             <p>
               Cookies used by GA4 include <code className="rounded bg-stone-800 px-1">_ga</code>
-              {' '}and <code className="rounded bg-stone-800 px-1">_ga_*</code> (2-year expiry),
-              used solely to distinguish unique visitors. Microsoft Clarity uses{' '}
-              <code className="rounded bg-stone-800 px-1">_clck</code> and{' '}
-              <code className="rounded bg-stone-800 px-1">_clsk</code> cookies for session
-              replay and heatmap analysis.
+              {' '}and <code className="rounded bg-stone-800 px-1">_ga_*</code>, which help
+              distinguish visits and sessions. Your analytics preference is stored locally in
+              your browser so the site can remember your choice.
             </p>
           </div>
 
           <div>
             <h2 className="mb-3 text-lg font-medium text-white">Data retention</h2>
             <p>
-              GA4 retains event-level data for 14 months by default. Aggregated reports may be
-              kept indefinitely. Microsoft Clarity session recordings are retained for 30 days.
-              You can request earlier deletion at any time (see "Your rights" below).
+              Google processes and retains analytics information according to the GA4 property
+              settings and Google's applicable policies. You may contact us with a privacy request
+              using the information below.
             </p>
           </div>
 
@@ -78,9 +76,9 @@ export default function Privacy() {
             </p>
             <ul className="ml-4 list-disc space-y-2">
               <li>
-                <strong className="text-stone-200">Clear consent &amp; cookies:</strong> Clear
-                your browser cookies for this site; the consent banner will reappear and you
-                can choose "Decline".
+                <strong className="text-stone-200">Change your choice:</strong> Select
+                "Analytics preferences" in the website footer at any time, then allow analytics
+                or turn it off.
               </li>
               <li>
                 <strong className="text-stone-200">Google Analytics opt-out:</strong> Install
@@ -92,19 +90,6 @@ export default function Privacy() {
                   className="underline underline-offset-2 hover:text-white"
                 >
                   Google Analytics opt-out browser add-on
-                </a>
-                .
-              </li>
-              <li>
-                <strong className="text-stone-200">Microsoft Clarity opt-out:</strong> Visit
-                {' '}
-                <a
-                  href="https://privacy.microsoft.com/en-us/privacystatement"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline underline-offset-2 hover:text-white"
-                >
-                  Microsoft's privacy dashboard
                 </a>
                 .
               </li>
@@ -124,15 +109,6 @@ export default function Privacy() {
               >
                 Google Privacy Policy
               </a>{' '}
-              and the{' '}
-              <a
-                href="https://privacy.microsoft.com/en-us/privacystatement"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline underline-offset-2 hover:text-white"
-              >
-                Microsoft Privacy Statement
-              </a>
               .
             </p>
           </div>

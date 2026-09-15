@@ -1,8 +1,12 @@
 import { Link } from 'wouter';
 import { Mail, Phone, MapPin, Shield } from 'lucide-react';
 import logo from '@assets/IMG_2051_1784854999049.jpeg';
+import { useCookieConsent } from '@/context/CookieConsentContext';
+import { trackEvent } from '@/lib/analytics';
 
 export default function Footer() {
+  const { openPreferences } = useCookieConsent();
+
   return (
     <footer className="bg-black border-t border-white/5 pt-16 pb-8 relative overflow-hidden">
       <div className="absolute inset-0 bg-sacred-geometry opacity-10 pointer-events-none" />
@@ -29,7 +33,16 @@ export default function Footer() {
               </li>
               <li className="flex items-start gap-3">
                 <Mail className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                <a href="mailto:Monica.Morgado@stonegateintelligence.com" className="hover:text-primary transition-colors break-all">
+                <a
+                  href="mailto:Monica.Morgado@stonegateintelligence.com"
+                  onClick={() =>
+                    trackEvent('email_lead_click', {
+                      contact_method: 'email',
+                      link_location: 'footer',
+                    })
+                  }
+                  className="hover:text-primary transition-colors break-all"
+                >
                   Monica.Morgado@stonegateintelligence.com
                 </a>
               </li>
@@ -58,9 +71,16 @@ export default function Footer() {
           <p className="text-xs text-muted-foreground uppercase tracking-widest text-center md:text-left">
             &copy; {new Date().getFullYear()} Stonegate Intelligence Group LLC. All rights reserved.
           </p>
-          <p className="text-xs text-muted-foreground">
-            Monica Morgado, Founder & Managing Director
-          </p>
+          <div className="flex flex-col items-center gap-2 text-xs text-muted-foreground md:items-end">
+            <p>Monica Morgado, Founder & Managing Director</p>
+            <button
+              type="button"
+              onClick={openPreferences}
+              className="rounded underline underline-offset-2 transition-colors hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              Analytics preferences
+            </button>
+          </div>
         </div>
       </div>
     </footer>
