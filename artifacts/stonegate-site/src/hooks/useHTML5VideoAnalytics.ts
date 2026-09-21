@@ -6,10 +6,15 @@ const VIDEO_TITLE = 'Stonegate Intelligence Group introduction';
 const VIDEO_FILE = '/media/stonegate-introduction.mp4';
 const MILESTONES = [25, 50, 75] as const;
 
-const videoParameters = {
-  video_title: VIDEO_TITLE,
-  video_file: VIDEO_FILE,
-};
+function getVideoParameters() {
+  return {
+    video_title: VIDEO_TITLE,
+    video_file: VIDEO_FILE,
+    video_url: new URL(VIDEO_FILE, window.location.origin).href,
+    page_location: window.location.href,
+    page_path: window.location.pathname + window.location.search,
+  };
+}
 
 export function useHTML5VideoAnalytics() {
   const started = useRef(false);
@@ -30,7 +35,10 @@ export function useHTML5VideoAnalytics() {
     }
 
     if (!started.current) {
-      started.current = trackEvent('video_start', videoParameters);
+      started.current = trackEvent('video_start', {
+        ...getVideoParameters(),
+        video_percent: 0,
+      });
     }
   };
 
@@ -39,7 +47,10 @@ export function useHTML5VideoAnalytics() {
     if (!Number.isFinite(video.duration) || video.duration <= 0) return;
 
     if (!started.current) {
-      started.current = trackEvent('video_start', videoParameters);
+      started.current = trackEvent('video_start', {
+        ...getVideoParameters(),
+        video_percent: 0,
+      });
     }
 
     const percentWatched = (video.currentTime / video.duration) * 100;
@@ -48,7 +59,8 @@ export function useHTML5VideoAnalytics() {
 
       if (
         trackEvent('video_progress', {
-          ...videoParameters,
+          ...getVideoParameters(),
+          video_percent: milestone,
           percent_watched: milestone,
         })
       ) {
@@ -60,7 +72,13 @@ export function useHTML5VideoAnalytics() {
   const onEnded = () => {
     if (completed.current) return;
 
-    if (trackEvent('video_complete', { ...videoParameters, percent_watched: 100 })) {
+    if (
+      trackEvent('video_complete', {
+        ...getVideoParameters(),
+        video_percent: 100,
+        percent_watched: 100,
+      })
+    ) {
       completed.current = true;
     }
   };
