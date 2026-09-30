@@ -2,7 +2,7 @@ import { Link } from 'wouter';
 import { Mail, Phone, MapPin, Shield } from 'lucide-react';
 import logo from '@assets/IMG_2051_1784854999049.jpeg';
 import { useCookieConsent } from '@/context/CookieConsentContext';
-import { trackEvent } from '@/lib/analytics';
+import { trackEmailLeadClick } from '@/lib/analytics';
 
 export default function Footer() {
   const { openPreferences } = useCookieConsent();
@@ -35,12 +35,7 @@ export default function Footer() {
                 <Mail className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                 <a
                   href="mailto:Monica.Morgado@stonegateintelligence.com"
-                  onClick={() =>
-                    trackEvent('email_lead_click', {
-                      contact_method: 'email',
-                      link_location: 'footer',
-                    })
-                  }
+                  onClick={() => trackEmailLeadClick('footer')}
                   className="hover:text-primary transition-colors break-all"
                 >
                   Monica.Morgado@stonegateintelligence.com

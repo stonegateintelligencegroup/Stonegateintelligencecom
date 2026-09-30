@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Mail, Phone, Globe, User, Shield } from 'lucide-react';
-import { trackEvent } from '@/lib/analytics';
+import { trackEmailLeadClick } from '@/lib/analytics';
 
 import {
   Form,
@@ -72,10 +72,7 @@ export default function Contact() {
       values.caseSummary,
     ].join('\n');
 
-    trackEvent('email_lead_click', {
-      contact_method: 'email',
-      link_location: 'contact_form',
-    });
+    trackEmailLeadClick('contact_form');
 
     window.location.href =
       `mailto:Monica.Morgado@stonegateintelligence.com?subject=${encodeURIComponent(subject)}` +
@@ -317,12 +314,7 @@ export default function Contact() {
                         <p className="font-bold text-foreground">Email</p>
                         <a
                           href="mailto:Monica.Morgado@stonegateintelligence.com"
-                          onClick={() =>
-                            trackEvent('email_lead_click', {
-                              contact_method: 'email',
-                              link_location: 'contact_details',
-                            })
-                          }
+                          onClick={() => trackEmailLeadClick('contact_details')}
                           className="text-sm text-muted-foreground hover:text-primary transition-colors break-all"
                         >
                           Monica.Morgado@stonegateintelligence.com

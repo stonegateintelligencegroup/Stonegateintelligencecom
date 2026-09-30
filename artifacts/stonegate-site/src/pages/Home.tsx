@@ -52,6 +52,7 @@ export default function Home() {
           className="mx-auto w-full max-w-3xl overflow-hidden border border-primary/40 bg-card p-1 shadow-[0_0_32px_rgba(220,20,60,0.14)]"
         >
           <video
+            ref={videoAnalytics.videoRef}
             className="aspect-[806/512] w-full bg-black object-cover"
             controls
             playsInline

@@ -6,6 +6,9 @@ const PRODUCTION_ANALYTICS_HOSTS = new Set([
   'www.stonegateintelligence.com',
 ]);
 
+const EMAIL_LEAD_DEDUPE_WINDOW_MS = 1500;
+let lastEmailLead: { location: string; timestamp: number } | null = null;
+
 declare global {
   interface Window {
     dataLayer?: unknown[];
@@ -80,4 +83,29 @@ export function trackEvent(
   }
 
   return false;
+}
+
+/**
+ * Records a single lead-intent event for a genuine email action while ignoring
+ * an accidental double-click on the same control.
+ */
+export function trackEmailLeadClick(linkLocation: string): boolean {
+  const now = Date.now();
+  if (
+    lastEmailLead?.location === linkLocation &&
+    now - lastEmailLead.timestamp < EMAIL_LEAD_DEDUPE_WINDOW_MS
+  ) {
+    return false;
+  }
+
+  const tracked = trackEvent('email_lead_click', {
+    contact_method: 'email',
+    link_location: linkLocation,
+  });
+
+  if (tracked) {
+    lastEmailLead = { location: linkLocation, timestamp: now };
+  }
+
+  return tracked;
 }

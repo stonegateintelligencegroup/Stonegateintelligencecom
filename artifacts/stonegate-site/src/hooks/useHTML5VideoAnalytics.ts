@@ -1,25 +1,62 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import type { SyntheticEvent } from 'react';
+import { useCookieConsent } from '@/context/CookieConsentContext';
 import { trackEvent } from '@/lib/analytics';
 
-const VIDEO_TITLE = 'Stonegate Intelligence Group introduction';
+const VIDEO_NAME = 'Stonegate Intelligence Group introduction';
 const VIDEO_FILE = '/media/stonegate-introduction.mp4';
 const MILESTONES = [25, 50, 75] as const;
 
-function getVideoParameters() {
+function getVideoParameters(videoPercent: number) {
   return {
-    video_title: VIDEO_TITLE,
+    video_name: VIDEO_NAME,
+    video_title: VIDEO_NAME,
     video_file: VIDEO_FILE,
     video_url: new URL(VIDEO_FILE, window.location.origin).href,
+    video_percent: videoPercent,
     page_location: window.location.href,
     page_path: window.location.pathname + window.location.search,
   };
 }
 
 export function useHTML5VideoAnalytics() {
+  const { status } = useCookieConsent();
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const impressionSent = useRef(false);
   const started = useRef(false);
   const completed = useRef(false);
   const sentMilestones = useRef(new Set<number>());
+
+  useEffect(() => {
+    if (status !== 'accepted' || impressionSent.current) return;
+
+    const video = videoRef.current;
+    if (!video) return;
+
+    const recordImpression = () => {
+      if (impressionSent.current) return;
+      impressionSent.current = trackEvent('video_impression', getVideoParameters(0));
+    };
+
+    if (typeof IntersectionObserver === 'undefined') {
+      const rect = video.getBoundingClientRect();
+      if (rect.top < window.innerHeight && rect.bottom > 0) recordImpression();
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting && entry.intersectionRatio >= 0.5) {
+          recordImpression();
+          if (impressionSent.current) observer.disconnect();
+        }
+      },
+      { threshold: 0.5 },
+    );
+
+    observer.observe(video);
+    return () => observer.disconnect();
+  }, [status]);
 
   const beginPlaybackSession = () => {
     started.current = false;
@@ -35,10 +72,7 @@ export function useHTML5VideoAnalytics() {
     }
 
     if (!started.current) {
-      started.current = trackEvent('video_start', {
-        ...getVideoParameters(),
-        video_percent: 0,
-      });
+      started.current = trackEvent('video_start', getVideoParameters(0));
     }
   };
 
@@ -47,10 +81,7 @@ export function useHTML5VideoAnalytics() {
     if (!Number.isFinite(video.duration) || video.duration <= 0) return;
 
     if (!started.current) {
-      started.current = trackEvent('video_start', {
-        ...getVideoParameters(),
-        video_percent: 0,
-      });
+      started.current = trackEvent('video_start', getVideoParameters(0));
     }
 
     const percentWatched = (video.currentTime / video.duration) * 100;
@@ -59,8 +90,7 @@ export function useHTML5VideoAnalytics() {
 
       if (
         trackEvent('video_progress', {
-          ...getVideoParameters(),
-          video_percent: milestone,
+          ...getVideoParameters(milestone),
           percent_watched: milestone,
         })
       ) {
@@ -74,8 +104,7 @@ export function useHTML5VideoAnalytics() {
 
     if (
       trackEvent('video_complete', {
-        ...getVideoParameters(),
-        video_percent: 100,
+        ...getVideoParameters(100),
         percent_watched: 100,
       })
     ) {
@@ -83,5 +112,5 @@ export function useHTML5VideoAnalytics() {
     }
   };
 
-  return { onPlay, onTimeUpdate, onEnded };
+  return { videoRef, onPlay, onTimeUpdate, onEnded };
 }
