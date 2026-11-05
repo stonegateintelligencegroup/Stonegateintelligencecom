@@ -1,6 +1,6 @@
 /**
  * Privacy Policy page
- * Linked from the cookie consent banner (/privacy)
+ * Linked from the footer and the analytics preferences panel (/privacy)
  */
 export default function Privacy() {
   return (
@@ -9,7 +9,7 @@ export default function Privacy() {
         <h1 className="mb-2 text-3xl font-semibold tracking-tight text-white">
           Privacy Policy
         </h1>
-        <p className="mb-10 text-sm text-stone-500">Last updated: September 15, 2026</p>
+        <p className="mb-10 text-sm text-stone-500">Last updated: November 5, 2026</p>
 
         <section className="space-y-8 text-sm leading-relaxed text-stone-300">
 
@@ -34,7 +34,7 @@ export default function Privacy() {
               <li>Referring website or search engine</li>
               <li>General geographic region (country / city — not precise location)</li>
               <li>Device type, operating system, and browser</li>
-              <li>Consent-approved interaction events, such as navigation, video milestones, and email-contact intent</li>
+              <li>Interaction events, such as navigation, video milestones, and email-contact intent</li>
             </ul>
             <p className="mt-3">
               We use this information for aggregate reporting and website improvement. We do not
@@ -47,9 +47,9 @@ export default function Privacy() {
           <div>
             <h2 className="mb-3 text-lg font-medium text-white">Cookies</h2>
             <p className="mb-3">
-              Analytics cookies are only set <em>after</em> you click "Allow analytics" in the
-              consent banner. If you decline or later turn analytics off, analytics storage is
-              denied and the site stops sending analytics events.
+              Analytics cookies are set when you visit the site. If you turn analytics off in
+              "Analytics preferences", or your browser sends a Global Privacy Control signal,
+              analytics storage is denied and the site stops sending analytics events.
             </p>
             <p>
               Cookies used by GA4 include <code className="rounded bg-stone-800 px-1">_ga</code>
@@ -72,13 +72,13 @@ export default function Privacy() {
             <h2 className="mb-3 text-lg font-medium text-white">Your rights & opt-out</h2>
             <p className="mb-3">
               You have the right to access, correct, or delete personal data we hold about you,
-              and to withdraw consent at any time. To opt out of analytics tracking:
+              and to opt out of analytics at any time. To opt out of analytics tracking:
             </p>
             <ul className="ml-4 list-disc space-y-2">
               <li>
                 <strong className="text-stone-200">Change your choice:</strong> Select
-                "Analytics preferences" in the website footer at any time, then allow analytics
-                or turn it off.
+                "Analytics preferences" in the website footer at any time and turn analytics off.
+                Browsers that send a Global Privacy Control signal are opted out automatically.
               </li>
               <li>
                 <strong className="text-stone-200">Google Analytics opt-out:</strong> Install

@@ -1,19 +1,16 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import {
   ANALYTICS_CONSENT_STORAGE_KEY,
+  hasAnalyticsConsent,
   isProductionAnalyticsHost,
 } from '@/lib/analytics';
 
 export type ConsentStatus = 'pending' | 'accepted' | 'declined';
 
+// Analytics is on by default (no banner). It is off only if the visitor turned it
+// off in "Analytics preferences" or their browser sends Global Privacy Control.
 function readStoredConsent(): ConsentStatus {
-  try {
-    const stored = localStorage.getItem(ANALYTICS_CONSENT_STORAGE_KEY);
-    if (stored === 'accepted' || stored === 'declined') return stored;
-  } catch {
-    // localStorage unavailable
-  }
-  return 'pending';
+  return hasAnalyticsConsent() ? 'accepted' : 'declined';
 }
 
 function applyConsentToGtag(status: 'accepted' | 'declined') {
