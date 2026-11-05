@@ -1,8 +1,9 @@
 import { useCookieConsent } from '@/context/CookieConsentContext';
 
 /**
- * Lightweight GDPR/CCPA cookie consent banner.
- * Renders for the first consent choice or when a visitor reopens preferences.
+ * Analytics preferences panel.
+ * Analytics is on by default, so this only renders when a visitor opens
+ * "Analytics preferences" from the footer.
  * Appearance matches the Stonegate dark theme.
  */
 export default function CookieBanner() {
@@ -22,7 +23,7 @@ export default function CookieBanner() {
         <div className="text-sm leading-relaxed text-stone-300">
           <p className="font-medium text-white">Analytics preferences</p>
           <p>
-            We use Google Analytics only after you accept. No form contents are sent to analytics.{' '}
+            We use Google Analytics to understand how visitors use this site. You can turn it off here. No form contents are sent to analytics.{' '}
             <a
               href="/privacy/"
               className="rounded underline underline-offset-2 hover:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"

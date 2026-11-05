@@ -21,16 +21,31 @@ export function isProductionAnalyticsHost(): boolean {
   return PRODUCTION_ANALYTICS_HOSTS.has(window.location.hostname.toLowerCase());
 }
 
-export function hasAnalyticsConsent(): boolean {
+/** True when the browser sends the Global Privacy Control opt-out signal. */
+export function hasGlobalPrivacyControl(): boolean {
   try {
-    return localStorage.getItem(ANALYTICS_CONSENT_STORAGE_KEY) === 'accepted';
+    return (navigator as Navigator & { globalPrivacyControl?: boolean }).globalPrivacyControl === true;
   } catch {
     return false;
   }
 }
 
 /**
- * Initializes the production GA4 tag with analytics and advertising storage denied.
+ * Analytics is on by default. It is off only when the visitor has turned it off
+ * in "Analytics preferences" or their browser sends Global Privacy Control.
+ */
+export function hasAnalyticsConsent(): boolean {
+  if (hasGlobalPrivacyControl()) return false;
+  try {
+    return localStorage.getItem(ANALYTICS_CONSENT_STORAGE_KEY) !== 'declined';
+  } catch {
+    return true;
+  }
+}
+
+/**
+ * Initializes the production GA4 tag. Analytics storage is granted unless the visitor
+ * has opted out; advertising storage is always denied.
  * Preview, development, localhost, and temporary hosts never load the production tag.
  */
 export function initializeAnalytics(): void {
@@ -46,8 +61,7 @@ export function initializeAnalytics(): void {
     ad_storage: 'denied',
     ad_user_data: 'denied',
     ad_personalization: 'denied',
-    analytics_storage: 'denied',
-    wait_for_update: 500,
+    analytics_storage: hasAnalyticsConsent() ? 'granted' : 'denied',
   });
   window.gtag('js', new Date());
   window.gtag('config', GA_MEASUREMENT_ID, {
