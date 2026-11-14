@@ -24,6 +24,14 @@
     "includeInSitemap": true
   },
   {
+    "path": "/ai-news",
+    "title": "AI News | Stonegate Intelligence Group",
+    "description": "Articles from Stonegate Intelligence Group on artificial intelligence, AI safety, and what fast-moving AI means for people and businesses.",
+    "canonical": "https://stonegateintelligence.com/ai-news/",
+    "robots": "index, follow",
+    "includeInSitemap": true
+  },
+  {
     "path": "/contact",
     "title": "Request a Consultation | Stonegate Intelligence Group",
     "description": "Contact Stonegate Intelligence Group to discuss a confidential investigation, due diligence matter, litigation support need, or intelligence consultation.",
