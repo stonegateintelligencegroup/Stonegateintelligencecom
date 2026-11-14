@@ -14,6 +14,7 @@ import About from '@/pages/About';
 import Services from '@/pages/Services';
 import Contact from '@/pages/Contact';
 import Privacy from '@/pages/Privacy';
+import AINews from '@/pages/AINews';
 import UnderConstruction from '@/pages/UnderConstruction';
 
 function Router() {
@@ -28,6 +29,7 @@ function Router() {
         <Route path="/" component={Home} />
         <Route path="/about" component={About} />
         <Route path="/services" component={Services} />
+        <Route path="/ai-news" component={AINews} />
         <Route path="/contact" component={Contact} />
         <Route path="/privacy" component={Privacy} />
         <Route path="/under-construction" component={UnderConstruction} />
