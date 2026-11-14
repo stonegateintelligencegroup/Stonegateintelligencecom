@@ -50,6 +50,7 @@ export default function Footer() {
               <li><Link href="/" className="hover:text-primary transition-colors">Home</Link></li>
               <li><Link href="/about/" className="hover:text-primary transition-colors">About Us</Link></li>
               <li><Link href="/services/" className="hover:text-primary transition-colors">Services</Link></li>
+              <li><a href="/articles/ai-2027/" className="hover:text-primary transition-colors">Article: AI by 2027</a></li>
             </ul>
           </div>
           
